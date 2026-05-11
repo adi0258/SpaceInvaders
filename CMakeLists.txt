@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.31)
+cmake_minimum_required(VERSION 3.29.6)
 project(bagel26)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -18,6 +18,15 @@ target_link_libraries(bagel26 PUBLIC SDL3-static)
 set(BUILD_SHARED_LIBS OFF)
 add_subdirectory(lib/SDL_image)
 target_link_libraries(bagel26 PUBLIC SDL3_image-static)
+
+set(BOX2D_SAMPLES OFF)
+set(BOX2D_BENCHMARKS OFF)
+set(BOX2D_DOCS OFF)
+set(BOX2D_PROFILE OFF)
+set(BOX2D_VALIDATE OFF)
+set(BOX2D_UNIT_TESTS OFF)
+add_subdirectory(lib/box2d)
+target_link_libraries(${PROJECT_NAME} PUBLIC box2d)
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
