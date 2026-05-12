@@ -27,63 +27,63 @@ namespace invaders {
         b2CreatePolygonShape(playerBody, &shapeDef, &poly);
 
         ent_type e = World::createEntity();
-        World::addComponent(e, PositionComponent{ x, y });
+        //World::addComponent(e, PositionComponent{ x, y });
         World::addComponent(e, RenderComponent{
             { gs::PLAYER_SPRITE_X, gs::PLAYER_SPRITE_Y, gs::PLAYER_SPRITE_W, gs::PLAYER_SPRITE_H },
             { x, y, gs::PLAYER_SPRITE_W, gs::PLAYER_SPRITE_H },
             gs::SPRITESHEET_TEXTURE_ID });
-        World::addComponent(e, ColliderComponent{ gs::PLAYER_SPRITE_W, gs::PLAYER_SPRITE_H, playerBody });
-        World::addComponent(e, HealthComponent{ gs::PLAYER_INITIAL_HP });
-        World::addComponent(e, PlayerInputComponent{});
+        //World::addComponent(e, ColliderComponent{ gs::PLAYER_SPRITE_W, gs::PLAYER_SPRITE_H, playerBody });
+        //World::addComponent(e, HealthComponent{ gs::PLAYER_INITIAL_HP });
+        //World::addComponent(e, PlayerInputComponent{});
         return e;
     }
 
     ent_type createAlien(float x, float y) {
         ent_type e = World::createEntity();
-        World::addComponent(e, PositionComponent{ x, y });
+        //World::addComponent(e, PositionComponent{ x, y });
         World::addComponent(e, VelocityComponent{ gs::ALIEN_VELOCITY_X, gs::ALIEN_VELOCITY_Y });
         World::addComponent(e, RenderComponent{
             { gs::ALIEN_SPRITE_X, gs::ALIEN_SPRITE_Y, gs::ALIEN_SPRITE_W, gs::ALIEN_SPRITE_H },
             { x, y, gs::ALIEN_SPRITE_W, gs::ALIEN_SPRITE_H },
             gs::SPRITESHEET_TEXTURE_ID });
-        World::addComponent(e, ColliderComponent{ gs::ALIEN_SPRITE_W, gs::ALIEN_SPRITE_H });
+        //World::addComponent(e, ColliderComponent{ gs::ALIEN_SPRITE_W, gs::ALIEN_SPRITE_H });
         World::addComponent(e, AlienAIComponent{ gs::ALIEN_AI_TIME_TO_MOVE, gs::ALIEN_AI_INITIAL_DIRECTION });
         return e;
     }
 
     ent_type createBunker(float x, float y) {
         ent_type e = World::createEntity();
-        World::addComponent(e, PositionComponent{ x, y });
+        //World::addComponent(e, PositionComponent{ x, y });
         World::addComponent(e, RenderComponent{
             { gs::BUNKER_SPRITE_X, gs::BUNKER_SPRITE_Y, gs::BUNKER_SPRITE_W, gs::BUNKER_SPRITE_H },
             { x, y, gs::BUNKER_SPRITE_W, gs::BUNKER_SPRITE_H },
             gs::SPRITESHEET_TEXTURE_ID });
-        World::addComponent(e, ColliderComponent{ gs::BUNKER_SPRITE_W, gs::BUNKER_SPRITE_H });
-        World::addComponent(e, HealthComponent{ gs::BUNKER_INITIAL_HP });
+        //World::addComponent(e, ColliderComponent{ gs::BUNKER_SPRITE_W, gs::BUNKER_SPRITE_H });
+        //World::addComponent(e, HealthComponent{ gs::BUNKER_INITIAL_HP });
         return e;
     }
 
     ent_type createBullet(float x, float y, float dy) {
         ent_type e = World::createEntity();
-        World::addComponent(e, PositionComponent{ x, y });
+        //World::addComponent(e, PositionComponent{ x, y });
         World::addComponent(e, VelocityComponent{ 0, dy });
         World::addComponent(e, RenderComponent{
             { gs::BULLET_SPRITE_X, gs::BULLET_SPRITE_Y, gs::BULLET_SPRITE_W, gs::BULLET_SPRITE_H },
             { x, y, gs::BULLET_SPRITE_W, gs::BULLET_SPRITE_H },
             gs::SPRITESHEET_TEXTURE_ID });
-        World::addComponent(e, ColliderComponent{ gs::BULLET_SPRITE_W, gs::BULLET_SPRITE_H });
-        World::addComponent(e, DamageComponent{ gs::BULLET_DAMAGE });
+        //World::addComponent(e, ColliderComponent{ gs::BULLET_SPRITE_W, gs::BULLET_SPRITE_H });
+        //World::addComponent(e, DamageComponent{ gs::BULLET_DAMAGE });
         return e;
     }
 
     ent_type createExplosion(float x, float y) {
         ent_type e = World::createEntity();
-        World::addComponent(e, PositionComponent{ x, y });
+        //World::addComponent(e, PositionComponent{ x, y });
         World::addComponent(e, RenderComponent{
             { gs::EXPLOSION_SPRITE_X, gs::EXPLOSION_SPRITE_Y, gs::EXPLOSION_SPRITE_W, gs::EXPLOSION_SPRITE_H },
             { x, y, gs::EXPLOSION_SPRITE_W, gs::EXPLOSION_SPRITE_H },
             gs::SPRITESHEET_TEXTURE_ID });
-        World::addComponent(e, LifetimeComponent{ gs::EXPLOSION_LIFETIME_SEC });
+        //World::addComponent(e, LifetimeComponent{ gs::EXPLOSION_LIFETIME_SEC });
         return e;
     }
 

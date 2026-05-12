@@ -61,9 +61,10 @@ namespace invaders {
         constexpr float EXPLOSION_LIFETIME_SEC = 0.5f;
     }
 
-    struct PositionComponent {
-        float x{ 0 }, y{ 0 };
-    };
+    struct Transform { SDL_FPoint p; float a; };
+
+    //TODO: FIND NON AI-GENERATED-BOLT-MUNCHING SLOP SPRITES
+    //TODO: LOOK IF RANDOM IS NEEDED FOR ALIEN SHOOTING
 
     struct VelocityComponent {
         float dx{ 0 }, dy{ 0 };
@@ -74,38 +75,33 @@ namespace invaders {
         SDL_FRect dest{ 0,0,0,0 };
         int textureId{ 0 };
     };
+    //TODO: ADD LIVES COMPONENT FOR PLAYER
 
     struct ColliderComponent {
-        float width{ 0 }, height{ 0 };
         b2BodyId body{};
     };
 
-    struct HealthComponent {
-        int hp{ 1 };
+
+
+    struct KeysComponent {};//TODO: LOOK INTO SAVING PREVIOUS STATE
+
+    struct IntentComponent
+    {
+        int direction;
+        int is_shooting;//TODO: LOOK INTO TYPES
     };
 
-    struct PlayerInputComponent {};
 
     struct AlienAIComponent {
         float timeToMove{ 1.0f };
         int direction{ 1 };
     };
 
-    struct DamageComponent {
-        int damage{ 1 };
-    };
-
-    struct LifetimeComponent {
-        float timeLeft{ 1.0f };
-    };
-
 
 
     ent_type createPlayer(b2WorldId world, float x, float y);
     ent_type createAlien(float x, float y);
-    ent_type createBunker(float x, float y);
     ent_type createBullet(float x, float y, float dy);
-    ent_type createExplosion(float x, float y);
 
     class SpaceInvaders
     {
@@ -124,8 +120,9 @@ namespace invaders {
         static constexpr float	RAD_TO_DEG = 57.2958f;
 
         void movement_system();
-        void render_system();
-        void player_control_system();
+        void draw_system();
+        void box_system();
+        void input_system();
         void alien_ai_system();
         void collision_system();
         void lifetime_system();
@@ -137,12 +134,8 @@ namespace invaders {
     };
 }
 
-template <> struct bagel::Storage<invaders::PositionComponent> final : bagel::NoInstance { using type = bagel::PackedStorage<invaders::PositionComponent>; };
 template <> struct bagel::Storage<invaders::VelocityComponent> final : bagel::NoInstance { using type = bagel::PackedStorage<invaders::VelocityComponent>; };
 template <> struct bagel::Storage<invaders::RenderComponent> final : bagel::NoInstance { using type = bagel::PackedStorage<invaders::RenderComponent>; };
 template <> struct bagel::Storage<invaders::ColliderComponent> final : bagel::NoInstance { using type = bagel::PackedStorage<invaders::ColliderComponent>; };
-template <> struct bagel::Storage<invaders::HealthComponent> final : bagel::NoInstance { using type = bagel::SparseStorage<invaders::HealthComponent>; };
-template <> struct bagel::Storage<invaders::PlayerInputComponent> final : bagel::NoInstance { using type = bagel::TaggedStorage<invaders::PlayerInputComponent>; };
+template <> struct bagel::Storage<invaders::KeysComponent> final : bagel::NoInstance { using type = bagel::TaggedStorage<invaders::KeysComponent>; };
 template <> struct bagel::Storage<invaders::AlienAIComponent> final : bagel::NoInstance { using type = bagel::SparseStorage<invaders::AlienAIComponent>; };
-template <> struct bagel::Storage<invaders::DamageComponent> final : bagel::NoInstance { using type = bagel::SparseStorage<invaders::DamageComponent>; };
-template <> struct bagel::Storage<invaders::LifetimeComponent> final : bagel::NoInstance { using type = bagel::SparseStorage<invaders::LifetimeComponent>; };
