@@ -28,6 +28,13 @@ namespace invaders {
         constexpr float PLAYER_SPRITE_H = 8.f;
         constexpr float PLAYER_SPRITE_HALF_W = PLAYER_SPRITE_W * 0.5f;
         constexpr float PLAYER_SPRITE_HALF_H = PLAYER_SPRITE_H * 0.5f;
+        // Match SpaceInvaders::WIN_W; on-screen + collider size scale with window width.
+        constexpr float PLAYER_REF_WIN_W = 800.f;
+        constexpr float PLAYER_WIDTH_TO_SCREEN = 0.10f;
+        constexpr float PLAYER_DRAW_W = PLAYER_REF_WIN_W * PLAYER_WIDTH_TO_SCREEN;
+        constexpr float PLAYER_DRAW_H = PLAYER_DRAW_W * (PLAYER_SPRITE_H / PLAYER_SPRITE_W);
+        constexpr float PLAYER_DRAW_HALF_W = PLAYER_DRAW_W * 0.5f;
+        constexpr float PLAYER_DRAW_HALF_H = PLAYER_DRAW_H * 0.5f;
         constexpr int PLAYER_INITIAL_HP = 3;
         constexpr float PLAYER_BODY_DENSITY = 1.f;
 
@@ -63,38 +70,29 @@ namespace invaders {
         constexpr float EXPLOSION_LIFETIME_SEC = 0.5f;
     }
 
-    struct Transform { SDL_FPoint p; float a; };
+    using Transform = struct { SDL_FPoint p; float a; };
 
-    //TODO: FIND NON AI-GENERATED-BOLT-MUNCHING SLOP SPRITES
     //TODO: LOOK IF RANDOM IS NEEDED FOR ALIEN SHOOTING
 
-    struct VelocityComponent {
+    using VelocityComponent = struct {
         float dx{ 0 }, dy{ 0 };
     };
 
-    struct RenderComponent {
-        SDL_FRect part{ 0,0,0,0 };
-        SDL_FRect dest{ 0,0,0,0 };
-        int textureId{ 0 };
-    };
+    using Drawable = struct { SDL_FRect part; SDL_FPoint size; };
     //TODO: ADD LIVES COMPONENT FOR PLAYER
 
-    struct ColliderComponent {
+    using ColliderComponent = struct {
         b2BodyId body{};
     };
 
 
 
-    struct KeysComponent {};//TODO: LOOK INTO SAVING PREVIOUS STATE
+    using KeysComponent = struct { SDL_Scancode left, right; };//TODO: LOOK INTO SAVING PREVIOUS STATE
 
-    struct IntentComponent
-    {
-        int direction;
-        int is_shooting;//TODO: LOOK INTO TYPES
-    };
+    using IntentComponent = struct { bool left, right, isShooting; };
 
 
-    struct AlienAIComponent {
+    using AlienAIComponent = struct {
         float timeToMove{ 1.0f };
         int direction{ 1 };
     };
@@ -135,8 +133,10 @@ namespace invaders {
     };
 }
 
+template <> struct bagel::Storage<invaders::Transform> final : bagel::NoInstance { using type = bagel::PackedStorage<invaders::Transform>; };
 template <> struct bagel::Storage<invaders::VelocityComponent> final : bagel::NoInstance { using type = bagel::PackedStorage<invaders::VelocityComponent>; };
-template <> struct bagel::Storage<invaders::RenderComponent> final : bagel::NoInstance { using type = bagel::PackedStorage<invaders::RenderComponent>; };
+template <> struct bagel::Storage<invaders::Drawable> final : bagel::NoInstance { using type = bagel::PackedStorage<invaders::Drawable>; };
 template <> struct bagel::Storage<invaders::ColliderComponent> final : bagel::NoInstance { using type = bagel::PackedStorage<invaders::ColliderComponent>; };
-template <> struct bagel::Storage<invaders::KeysComponent> final : bagel::NoInstance { using type = bagel::TaggedStorage<invaders::KeysComponent>; };
+template <> struct bagel::Storage<invaders::KeysComponent> final : bagel::NoInstance { using type = bagel::PackedStorage<invaders::KeysComponent>; };
+template <> struct bagel::Storage<invaders::IntentComponent> final : bagel::NoInstance { using type = bagel::PackedStorage<invaders::IntentComponent>; };
 template <> struct bagel::Storage<invaders::AlienAIComponent> final : bagel::NoInstance { using type = bagel::SparseStorage<invaders::AlienAIComponent>; };
