@@ -1,5 +1,7 @@
 #pragma once
 #include <algorithm>
+#include <string>
+
 #include "bagel.h"
 #include <SDL3/SDL.h>
 #include <SDL3_image/SDL_image.h>
@@ -12,7 +14,7 @@ namespace invaders {
     namespace gs
     {
         // --- Assets / rendering (SDL_Image load path; RenderComponent.textureId; optional draw scaling) ---
-        constexpr char* SPRITE_SHEET_PATH = "res/pong.png";//TODO ADD SPRITESHEET AND CHANGE PATH
+        inline constexpr const char* SPRITE_SHEET_PATH = "res/alternate_space_invaders_sprite_sheet.png";
         constexpr float TEX_SCALE = 0.25f;
         constexpr int SPRITESHEET_TEXTURE_ID = -1;
 
@@ -20,44 +22,44 @@ namespace invaders {
         constexpr float BOX_SCALE = 10.f;
 
         // --- Player (createPlayer: PositionComponent, RenderComponent, ColliderComponent, HealthComponent, PlayerInputComponent; Box2D kinematic shape) ---
-        constexpr float PLAYER_SPRITE_X = 0;
-        constexpr float PLAYER_SPRITE_Y = 0;
-        constexpr float PLAYER_SPRITE_W = 32;
-        constexpr float PLAYER_SPRITE_H = 32;
+        constexpr float PLAYER_SPRITE_X = 1.f;
+        constexpr float PLAYER_SPRITE_Y = 20.f;
+        constexpr float PLAYER_SPRITE_W = 13.f;
+        constexpr float PLAYER_SPRITE_H = 8.f;
         constexpr float PLAYER_SPRITE_HALF_W = PLAYER_SPRITE_W * 0.5f;
         constexpr float PLAYER_SPRITE_HALF_H = PLAYER_SPRITE_H * 0.5f;
         constexpr int PLAYER_INITIAL_HP = 3;
         constexpr float PLAYER_BODY_DENSITY = 1.f;
 
         // --- Alien (createAlien: VelocityComponent, RenderComponent, ColliderComponent, AlienAIComponent) ---
-        constexpr float ALIEN_SPRITE_X = 32;
-        constexpr float ALIEN_SPRITE_Y = 0;
-        constexpr float ALIEN_SPRITE_W = 32;
-        constexpr float ALIEN_SPRITE_H = 32;
+        constexpr float ALIEN_SPRITE_X = 4.f;
+        constexpr float ALIEN_SPRITE_Y = 52.f;
+        constexpr float ALIEN_SPRITE_W = 8.f;
+        constexpr float ALIEN_SPRITE_H = 8.f;
         constexpr float ALIEN_VELOCITY_X = 1.0f;
         constexpr float ALIEN_VELOCITY_Y = 0.f;
         constexpr float ALIEN_AI_TIME_TO_MOVE = 1.0f;
         constexpr int ALIEN_AI_INITIAL_DIRECTION = 1;
 
         // --- Bunker (createBunker: RenderComponent, ColliderComponent, HealthComponent) ---
-        constexpr float BUNKER_SPRITE_X = 64;
-        constexpr float BUNKER_SPRITE_Y = 0;
-        constexpr float BUNKER_SPRITE_W = 64;
-        constexpr float BUNKER_SPRITE_H = 32;
+        constexpr float BUNKER_SPRITE_X = 32.f;
+        constexpr float BUNKER_SPRITE_Y = 112.f;
+        constexpr float BUNKER_SPRITE_W = 16.f;
+        constexpr float BUNKER_SPRITE_H = 8.f;
         constexpr int BUNKER_INITIAL_HP = 10;
 
         // --- Bullet (createBullet: VelocityComponent dy from caller; RenderComponent, ColliderComponent, DamageComponent) ---
-        constexpr float BULLET_SPRITE_X = 96;
-        constexpr float BULLET_SPRITE_Y = 0;
-        constexpr float BULLET_SPRITE_W = 8;
-        constexpr float BULLET_SPRITE_H = 16;
+        constexpr float BULLET_SPRITE_X = 15.f;
+        constexpr float BULLET_SPRITE_Y = 80.f;
+        constexpr float BULLET_SPRITE_W = 3.f;
+        constexpr float BULLET_SPRITE_H = 8.f;
         constexpr int BULLET_DAMAGE = 1;
 
         // --- Explosion (createExplosion: RenderComponent, LifetimeComponent) ---
-        constexpr float EXPLOSION_SPRITE_X = 104;
-        constexpr float EXPLOSION_SPRITE_Y = 0;
-        constexpr float EXPLOSION_SPRITE_W = 32;
-        constexpr float EXPLOSION_SPRITE_H = 32;
+        constexpr float EXPLOSION_SPRITE_X = 33.f;
+        constexpr float EXPLOSION_SPRITE_Y = 20.f;
+        constexpr float EXPLOSION_SPRITE_W = 13.f;
+        constexpr float EXPLOSION_SPRITE_H = 8.f;
         constexpr float EXPLOSION_LIFETIME_SEC = 0.5f;
     }
 
@@ -98,8 +100,7 @@ namespace invaders {
     };
 
 
-
-    ent_type createPlayer(b2WorldId world, float x, float y);
+    Entity createPlayer(b2WorldId world, float x, float y);
     ent_type createAlien(float x, float y);
     ent_type createBullet(float x, float y, float dy);
 

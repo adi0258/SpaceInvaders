@@ -8,9 +8,7 @@ using namespace bagel;
 
 
 namespace invaders {
-
-
-    void createPlayer(b2WorldId world, float x, float y) {
+    Entity createPlayer(b2WorldId world, float x, float y) {
         b2BodyDef bodyDef = b2DefaultBodyDef();
         bodyDef.type = b2_kinematicBody;
         bodyDef.position = {
@@ -24,14 +22,14 @@ namespace invaders {
             gs::PLAYER_SPRITE_HALF_W / gs::BOX_SCALE,
             gs::PLAYER_SPRITE_HALF_H / gs::BOX_SCALE);
         b2CreatePolygonShape(playerBody, &shapeDef, &poly);
-
-        Entity::create().addAll<RenderComponent,ColliderComponent,KeysComponent>(
-            RenderComponent{
-                { gs::PLAYER_SPRITE_X, gs::PLAYER_SPRITE_Y, gs::PLAYER_SPRITE_W, gs::PLAYER_SPRITE_H },
-                { x, y, gs::PLAYER_SPRITE_W, gs::PLAYER_SPRITE_H },
-                gs::SPRITESHEET_TEXTURE_ID },
-            ColliderComponent{ gs::PLAYER_SPRITE_W, gs::PLAYER_SPRITE_H, playerBody }
-            KeysComponent{});
+        return Entity::create();
+        // Entity::create().addAll<RenderComponent,ColliderComponent,KeysComponent>(
+        //     RenderComponent{
+        //         { gs::PLAYER_SPRITE_X, gs::PLAYER_SPRITE_Y, gs::PLAYER_SPRITE_W, gs::PLAYER_SPRITE_H },
+        //         { x, y, gs::PLAYER_SPRITE_W, gs::PLAYER_SPRITE_H },
+        //         gs::SPRITESHEET_TEXTURE_ID },
+        //     ColliderComponent{ gs::PLAYER_SPRITE_W, gs::PLAYER_SPRITE_H, playerBody }
+        //     KeysComponent{});
     }
 
     ent_type createAlien(float x, float y) {
