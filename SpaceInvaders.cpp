@@ -241,15 +241,40 @@ Entity createBullet(b2WorldId world, float x, float y, float dy) {
 			.set<AlienAIComponent>()
 			.build();
 
+    	bool hitEdge = false;
+    	int newDirection = 0;
+
+    	for (Entity e = Entity::first(); !e.eof(); e.next()) {
+    		if (e.test(mask)) {
+    			const auto& t = e.get<Transform>();
+    			const auto& ai = e.get<AlienAIComponent>();
+
+    			if (t.p.x < 50.f && ai.direction == -1) {
+    				hitEdge = true;
+    				newDirection = 1;
+    				break;
+    			}
+    			if (t.p.x > WIN_W - 50.f && ai.direction == 1) {
+    				hitEdge = true;
+    				newDirection = -1;
+    				break;
+    			}
+    		}
+    	}
+
     	for (Entity e = Entity::first(); !e.eof(); e.next()) {
     		if (e.test(mask)) {
     			auto& ai = e.get<AlienAIComponent>();
-    			const auto& t = e.get<Transform>();
     			const auto& c = e.get<ColliderComponent>();
 
-    			// היפוך כיוון פשוט כשהחייזר מגיע לקצוות המסך
-    			if (t.p.x < 50.f) ai.direction = 1;
-    			if (t.p.x > WIN_W - 50.f) ai.direction = -1;
+    			if (hitEdge) {
+    				ai.direction = newDirection;
+
+    				b2Vec2 pos = b2Body_GetPosition(c.body);
+    				b2Rot rot = b2Body_GetRotation(c.body);
+    				pos.y += 20.f / gs::BOX_SCALE;
+    				b2Body_SetTransform(c.body, pos, rot);
+    			}
 
     			b2Body_SetLinearVelocity(c.body, { ai.direction * 15.f, 0.f });
     		}
@@ -354,7 +379,18 @@ Entity createBullet(b2WorldId world, float x, float y, float dy) {
             WIN_W_MID - gs::PLAYER_DRAW_HALF_W,
             WIN_H - gs::PLAYER_DRAW_H);
 
-    	createAlien(box, WIN_W_MID, 100.f);
+    	const int ALIEN_ROWS = 4;
+    	const int ALIEN_COLS = 8;
+    	const float START_X = 100.f;
+    	const float START_Y = 60.f;
+    	const float SPACING_X = 60.f;
+    	const float SPACING_Y = 50.f;
+
+    	for (int row = 0; row < ALIEN_ROWS; ++row) {
+    		for (int col = 0; col < ALIEN_COLS; ++col) {
+    			createAlien(box, START_X + col * SPACING_X, START_Y + row * SPACING_Y);
+    		}
+    	}
 
     }
 
