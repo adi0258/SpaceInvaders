@@ -195,8 +195,17 @@ namespace invaders {
                 const auto& i = e.get<IntentComponent>();
                 const auto& c = e.get<ColliderComponent>();
 
-                const float f = i.left ? -30 : i.right ? 30 : 0;
-                b2Body_SetLinearVelocity(c.body, { f,0 });
+                float f = i.left ? -30.f : i.right ? 30.f : 0.f;
+
+                b2Vec2 pos = b2Body_GetPosition(c.body);
+
+                float minX = 30.f / gs::BOX_SCALE;
+                float maxX = (WIN_W - 30.f) / gs::BOX_SCALE;
+
+                if (pos.x <= minX && f < 0.f) f = 0.f;
+                if (pos.x >= maxX && f > 0.f) f = 0.f;
+
+                b2Body_SetLinearVelocity(c.body, { f, 0.f });
             }
         }
     }
