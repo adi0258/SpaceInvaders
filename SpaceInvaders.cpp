@@ -24,7 +24,7 @@ namespace invaders {
         b2Polygon poly = b2MakeBox(
             gs::PLAYER_DRAW_HALF_W / gs::BOX_SCALE,
             gs::PLAYER_DRAW_HALF_H / gs::BOX_SCALE);
-        b2CreatePolygonShape(playerBody, &shapeDef, &poly);
+        b2ShapeId playerShape = b2CreatePolygonShape(playerBody, &shapeDef, &poly);
 
         Entity player = Entity::create();
         player.addAll<
@@ -39,7 +39,7 @@ namespace invaders {
             LivesComponent{ gs::PLAYER_INITIAL_HP },
             KeysComponent{ SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT },
             IntentComponent{ false, false, false },
-            ColliderComponent{ playerBody },
+            ColliderComponent{ playerBody, playerShape },
             Drawable{
                { gs::PLAYER_SPRITE_X, gs::PLAYER_SPRITE_Y, gs::PLAYER_SPRITE_W, gs::PLAYER_SPRITE_H },
                { gs::PLAYER_DRAW_W, gs::PLAYER_DRAW_H } },
@@ -63,10 +63,10 @@ namespace invaders {
         b2ShapeDef shapeDef = b2DefaultShapeDef();
         shapeDef.enableSensorEvents = true;
         b2Polygon poly = b2MakeBox((gs::ALIEN_SPRITE_W * 2.f) / gs::BOX_SCALE, (gs::ALIEN_SPRITE_H * 2.f) / gs::BOX_SCALE);
-        b2CreatePolygonShape(body, &shapeDef, &poly);
+        b2ShapeId alienShape = b2CreatePolygonShape(body, &shapeDef, &poly);
 
         alien.addAll<ColliderComponent, Drawable, VelocityComponent, Transform, AlienAIComponent>(
-            ColliderComponent{ body },
+            ColliderComponent{ body, alienShape },
             Drawable{
                { gs::ALIEN_SPRITE_X, gs::ALIEN_SPRITE_Y, gs::ALIEN_SPRITE_W, gs::ALIEN_SPRITE_H },
                { gs::ALIEN_SPRITE_W * 4.f, gs::ALIEN_SPRITE_H * 4.f }
@@ -96,10 +96,10 @@ namespace invaders {
         shapeDef.isSensor = true;
         shapeDef.enableSensorEvents = true;
         b2Polygon poly = b2MakeBox((gs::BULLET_SPRITE_W) / gs::BOX_SCALE, (gs::BULLET_SPRITE_H) / gs::BOX_SCALE);
-        b2CreatePolygonShape(body, &shapeDef, &poly);
+        b2ShapeId bulletShape = b2CreatePolygonShape(body, &shapeDef, &poly);
 
         bullet.addAll<ColliderComponent, Drawable, Transform, BulletComponent>(
-            ColliderComponent{ body },
+            ColliderComponent{ body, bulletShape },
             Drawable{
                { gs::BULLET_SPRITE_X, gs::BULLET_SPRITE_Y, gs::BULLET_SPRITE_W, gs::BULLET_SPRITE_H },
                { gs::BULLET_SPRITE_W * 2.f, gs::BULLET_SPRITE_H * 2.f }
@@ -128,10 +128,10 @@ namespace invaders {
         shapeDef.isSensor = true;
         shapeDef.enableSensorEvents = true;
         b2Polygon poly = b2MakeBox((gs::BULLET_SPRITE_W) / gs::BOX_SCALE, (gs::BULLET_SPRITE_H) / gs::BOX_SCALE);
-        b2CreatePolygonShape(body, &shapeDef, &poly);
+        b2ShapeId alienBulletShape = b2CreatePolygonShape(body, &shapeDef, &poly);
 
         bullet.addAll<ColliderComponent, Drawable, Transform, AlienBulletComponent>(
-            ColliderComponent{ body },
+            ColliderComponent{ body, alienBulletShape },
             Drawable{
                { gs::BULLET_SPRITE_X, gs::BULLET_SPRITE_Y, gs::BULLET_SPRITE_W, gs::BULLET_SPRITE_H },
                { gs::BULLET_SPRITE_W * 2.f, gs::BULLET_SPRITE_H * 2.f }
@@ -349,9 +349,6 @@ namespace invaders {
     }
 
     void SpaceInvaders::collision_system() {
-        static const Mask bulletMask = MaskBuilder().set<Transform>().set<BulletComponent>().build();
-        static const Mask alienMask = MaskBuilder().set<Transform>().set<AlienAIComponent>().build();
-
         const auto se = b2World_GetSensorEvents(box);
         for (int i = 0; i < se.beginCount; ++i) {
             const b2BodyId sensorBody = b2Shape_GetBody(se.beginEvents[i].sensorShapeId);
@@ -364,12 +361,11 @@ namespace invaders {
             Entity sensorEntity{ ent_type{ static_cast<id_type>(reinterpret_cast<uintptr_t>(b2Body_GetUserData(sensorBody))) } };
             Entity visitorEntity{ ent_type{ static_cast<id_type>(reinterpret_cast<uintptr_t>(b2Body_GetUserData(visitorBody))) } };
             
-
             if (sensorEntity.has<BulletComponent>() && visitorEntity.has<AlienAIComponent>()) {
+                visitorEntity.add<DestructionComponent>(DestructionComponent{ 0, 1, 1});
+                b2Shape_EnableSensorEvents(visitorEntity.get<ColliderComponent>().shape, false);
                 b2DestroyBody(sensorBody);
                 sensorEntity.destroy();
-                b2DestroyBody(visitorBody);
-                visitorEntity.destroy();
             }
             else if (visitorEntity.has<LivesComponent>() && sensorEntity.has<AlienBulletComponent>()) {
                 auto& lives = visitorEntity.get<LivesComponent>();
@@ -399,6 +395,54 @@ namespace invaders {
         }
     }
 
+    void SpaceInvaders::destruction_system() {
+        static const Mask mask = MaskBuilder()
+            .set<Transform>()
+            .set<ColliderComponent>()
+            .set<DestructionComponent>()
+            .build();
+
+        for (Entity e = Entity::first(); !e.eof(); e.next()) {
+            if (e.test(mask)) {
+                const auto& t = e.get<Transform>();
+                const auto& c = e.get<ColliderComponent>();
+                auto& d = e.get<DestructionComponent>();
+
+                if (d.currentDestructionStage > d.totalDestructionStages) {
+                    b2DestroyBody(c.body);
+                    e.destroy();
+                }
+                else {
+                    d.framesToNextStage--;
+                    if (d.framesToNextStage != 0)
+                        continue;
+                    d.currentDestructionStage++;
+                    d.framesToNextStage = gs::DESTRUCTION_FRAMES_TO_NEXT_STAGE;
+                    if (e.has<KeysComponent>()) {
+                        switch (d.currentDestructionStage) {
+                            case 1:
+                                e.get<Drawable>().part = { gs::PLAYER_DESTRUCTION_1_SPRITE_X, gs::PLAYER_DESTRUCTION_1_SPRITE_Y, gs::PLAYER_DESTRUCTION_1_SPRITE_W, gs::PLAYER_DESTRUCTION_1_SPRITE_H };
+                                break;
+                            case 2:
+                                e.get<Drawable>().part = { gs::PLAYER_DESTRUCTION_2_SPRITE_X, gs::PLAYER_DESTRUCTION_2_SPRITE_Y, gs::PLAYER_DESTRUCTION_2_SPRITE_W, gs::PLAYER_DESTRUCTION_2_SPRITE_H };
+                                break;
+                            case 3:
+                                e.get<Drawable>().part = { gs::PLAYER_DESTRUCTION_3_SPRITE_X, gs::PLAYER_DESTRUCTION_3_SPRITE_Y, gs::PLAYER_DESTRUCTION_3_SPRITE_W, gs::PLAYER_DESTRUCTION_3_SPRITE_H };
+                                break;
+                        }
+                    }
+                    else if (e.has<AlienAIComponent>()) {
+                        switch (d.currentDestructionStage) {
+                            case 1:
+                                e.get<Drawable>().part = { gs::ALIEN_DESTRUCTION_SPRITE_X, gs::ALIEN_DESTRUCTION_SPRITE_Y, gs::ALIEN_DESTRUCTION_SPRITE_W, gs::ALIEN_DESTRUCTION_SPRITE_H };
+                                break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     void SpaceInvaders::run()
     {
         auto start = SDL_GetTicks();
@@ -412,6 +456,7 @@ namespace invaders {
             alien_shooting_system();
             box_system();
             collision_system();
+            destruction_system();
             cleanup_system();
 
             SDL_RenderClear(ren);
@@ -492,16 +537,11 @@ namespace invaders {
             WIN_W_MID - gs::PLAYER_DRAW_HALF_W,
             WIN_H - gs::PLAYER_DRAW_H);
 
-        const int ALIEN_ROWS = 4;
-        const int ALIEN_COLS = 8;
-        const float START_X = 100.f;
-        const float START_Y = 60.f;
-        const float SPACING_X = 60.f;
-        const float SPACING_Y = 50.f;
-
-        for (int row = 0; row < ALIEN_ROWS; ++row) {
-            for (int col = 0; col < ALIEN_COLS; ++col) {
-                createAlien(box, START_X + col * SPACING_X, START_Y + row * SPACING_Y);
+        for (int row = 0; row < gs::ALIEN_ROWS; ++row) {
+            for (int col = 0; col < gs::ALIEN_COLS; ++col) {
+                createAlien(box,
+                    gs::ALIEN_GRID_START_X + static_cast<float>(col) * gs::ALIEN_GRID_SPACING_X,
+                    gs::ALIEN_GRID_START_Y + static_cast<float>(row) * gs::ALIEN_GRID_SPACING_Y);
             }
         }
     }

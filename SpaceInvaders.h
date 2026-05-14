@@ -34,14 +34,44 @@ namespace invaders {
         constexpr int PLAYER_INITIAL_HP = 3;
         constexpr float PLAYER_BODY_DENSITY = 1.f;
 
+        constexpr float PLAYER_DESTRUCTION_1_SPRITE_X = 24.f;
+        constexpr float PLAYER_DESTRUCTION_1_SPRITE_Y = 31.f;
+        constexpr float PLAYER_DESTRUCTION_1_SPRITE_W = 15.f;
+        constexpr float PLAYER_DESTRUCTION_1_SPRITE_H = 8.f;
+
+        constexpr float PLAYER_DESTRUCTION_2_SPRITE_X = 45.f;
+        constexpr float PLAYER_DESTRUCTION_2_SPRITE_Y = 31.f;
+        constexpr float PLAYER_DESTRUCTION_2_SPRITE_W = 15.f;
+        constexpr float PLAYER_DESTRUCTION_2_SPRITE_H = 8.f;
+
+        constexpr float PLAYER_DESTRUCTION_3_SPRITE_X = 66.f;
+        constexpr float PLAYER_DESTRUCTION_3_SPRITE_Y = 31.f;
+        constexpr float PLAYER_DESTRUCTION_3_SPRITE_W = 15.f;
+        constexpr float PLAYER_DESTRUCTION_3_SPRITE_H = 8.f;
+
         constexpr float ALIEN_SPRITE_X = 4.f;
         constexpr float ALIEN_SPRITE_Y = 52.f;
         constexpr float ALIEN_SPRITE_W = 8.f;
         constexpr float ALIEN_SPRITE_H = 8.f;
+
+        constexpr float ALIEN_DESTRUCTION_SPRITE_X = 129.f;
+        constexpr float ALIEN_DESTRUCTION_SPRITE_Y = 52.f;
+        constexpr float ALIEN_DESTRUCTION_SPRITE_W = 14.f;
+        constexpr float ALIEN_DESTRUCTION_SPRITE_H = 8.f;
+
+        constexpr int DESTRUCTION_FRAMES_TO_NEXT_STAGE = 15;
+
         constexpr float ALIEN_VELOCITY_X = 1.0f;
         constexpr float ALIEN_VELOCITY_Y = 0.f;
         constexpr float ALIEN_AI_TIME_TO_MOVE = 1.0f;
         constexpr int ALIEN_AI_INITIAL_DIRECTION = 1;
+
+        constexpr int ALIEN_ROWS = 1;
+        constexpr int ALIEN_COLS = 8;
+        constexpr float ALIEN_GRID_START_X = 100.f;
+        constexpr float ALIEN_GRID_START_Y = 60.f;
+        constexpr float ALIEN_GRID_SPACING_X = 60.f;
+        constexpr float ALIEN_GRID_SPACING_Y = 50.f;
 
         constexpr float BUNKER_SPRITE_X = 32.f;
         constexpr float BUNKER_SPRITE_Y = 112.f;
@@ -65,13 +95,14 @@ namespace invaders {
     using Transform = struct { SDL_FPoint p; float a; };
     using VelocityComponent = struct { float dx{ 0 }, dy{ 0 }; };
     using Drawable = struct { SDL_FRect part; SDL_FPoint size; };
-    using ColliderComponent = struct { b2BodyId body{}; };
+    using ColliderComponent = struct { b2BodyId body{}; b2ShapeId shape{}; };
     using KeysComponent = struct { SDL_Scancode left, right; };
     using IntentComponent = struct { bool left, right, isShooting; };
     using WeaponComponent = struct { int cooldown{ 0 }; };
     using BulletComponent = struct {};
     using AlienBulletComponent = struct {};
     using LivesComponent = struct { int lives{ 3 }; };
+    using DestructionComponent = struct { int currentDestructionStage{ 0 }, totalDestructionStages{ 3 }, framesToNextStage{ gs::DESTRUCTION_FRAMES_TO_NEXT_STAGE }; };
 
     using AlienAIComponent = struct {
         float timeToMove{ 1.0f };
@@ -108,6 +139,7 @@ namespace invaders {
         void shooting_system();
         void alien_shooting_system();
         void cleanup_system();
+        void destruction_system();
 
         SDL_Texture*		tex = nullptr;
         SDL_Renderer*		ren = nullptr;
