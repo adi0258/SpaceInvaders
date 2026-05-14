@@ -58,7 +58,7 @@ namespace invaders {
         b2BodyId body = b2CreateBody(world, &bodyDef);
 
         b2ShapeDef shapeDef = b2DefaultShapeDef();
-        shapeDef.isSensor = true;
+        shapeDef.enableSensorEvents = true;
         b2Polygon poly = b2MakeBox((gs::ALIEN_SPRITE_W * 2.f) / gs::BOX_SCALE, (gs::ALIEN_SPRITE_H * 2.f) / gs::BOX_SCALE);
         b2CreatePolygonShape(body, &shapeDef, &poly);
 
@@ -90,6 +90,8 @@ namespace invaders {
 
         b2ShapeDef shapeDef = b2DefaultShapeDef();
         shapeDef.density = 1.0f;
+        shapeDef.isSensor = true;
+        shapeDef.enableSensorEvents = true;
         b2Polygon poly = b2MakeBox((gs::BULLET_SPRITE_W) / gs::BOX_SCALE, (gs::BULLET_SPRITE_H) / gs::BOX_SCALE);
         b2CreatePolygonShape(body, &shapeDef, &poly);
 
@@ -120,6 +122,8 @@ namespace invaders {
 
         b2ShapeDef shapeDef = b2DefaultShapeDef();
         shapeDef.density = 1.0f;
+        shapeDef.isSensor = true;
+        shapeDef.enableSensorEvents = true;
         b2Polygon poly = b2MakeBox((gs::BULLET_SPRITE_W) / gs::BOX_SCALE, (gs::BULLET_SPRITE_H) / gs::BOX_SCALE);
         b2CreatePolygonShape(body, &shapeDef, &poly);
 
@@ -345,26 +349,22 @@ namespace invaders {
         static const Mask bulletMask = MaskBuilder().set<Transform>().set<BulletComponent>().build();
         static const Mask alienMask = MaskBuilder().set<Transform>().set<AlienAIComponent>().build();
 
-        for (Entity eBullet = Entity::first(); !eBullet.eof(); eBullet.next()) {
-            if (eBullet.test(bulletMask) && !eBullet.has<DeadComponent>()) {
-                const auto& tB = eBullet.get<Transform>();
+        const auto se = b2World_GetSensorEvents(box);
+        for (int i = 0; i < se.beginCount; ++i) {
+            const b2BodyId sensorBody = b2Shape_GetBody(se.beginEvents[i].sensorShapeId);
+            const b2BodyId visitorBody = b2Shape_GetBody(se.beginEvents[i].visitorShapeId);
 
-                for (Entity eAlien = Entity::first(); !eAlien.eof(); eAlien.next()) {
-                    if (eAlien.test(alienMask) && !eAlien.has<DeadComponent>()) {
-                        const auto& tA = eAlien.get<Transform>();
+            if (!b2Body_IsValid(sensorBody) || !b2Body_IsValid(visitorBody)) {
+                continue;
+            }
 
-                        float dx = tB.p.x - tA.p.x;
-                        float dy = tB.p.y - tA.p.y;
-                        if (dx < 0) dx = -dx;
-                        if (dy < 0) dy = -dy;
-
-                        if (dx < 19.0f && dy < 24.0f) {
-                            eBullet.add(DeadComponent{});
-                            eAlien.add(DeadComponent{});
-                            break;
-                        }
-                    }
-                }
+            Entity sensorEntity{ ent_type{ static_cast<id_type>(reinterpret_cast<uintptr_t>(b2Body_GetUserData(sensorBody))) } };
+            Entity visitorEntity{ ent_type{ static_cast<id_type>(reinterpret_cast<uintptr_t>(b2Body_GetUserData(visitorBody))) } };
+            if (sensorEntity.has<BulletComponent>() && visitorEntity.has<AlienAIComponent>()) {
+                b2DestroyBody(sensorBody);
+                b2DestroyBody(visitorBody);
+                sensorEntity.destroy();
+                visitorEntity.destroy();
             }
         }
     }
@@ -376,21 +376,9 @@ namespace invaders {
             if (e.test(transformMask) && !e.has<DeadComponent>()) {
                 const auto& t = e.get<Transform>();
                 if (t.p.y > WIN_H + 100.f || t.p.y < -100.f) {
-                    e.add(DeadComponent{});
+                    b2DestroyBody(e.get<ColliderComponent>().body);
+                    e.destroy();
                 }
-            }
-        }
-
-        // Destroy Dead entities
-        static const Mask deadMask = MaskBuilder()
-            .set<ColliderComponent>()
-            .set<DeadComponent>()
-            .build();
-
-        for (Entity e = Entity::first(); !e.eof(); e.next()) {
-            if (e.test(deadMask)) {
-                b2DestroyBody(e.get<ColliderComponent>().body);
-                e.destroy();
             }
         }
     }

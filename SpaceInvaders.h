@@ -71,7 +71,6 @@ namespace invaders {
     using WeaponComponent = struct { int cooldown{ 0 }; };
     using BulletComponent = struct {};
     using AlienBulletComponent = struct {};
-    using DeadComponent = struct {};
 
     using AlienAIComponent = struct {
         float timeToMove{ 1.0f };
@@ -126,4 +125,3 @@ template <> struct bagel::Storage<invaders::AlienAIComponent> final : bagel::NoI
 template <> struct bagel::Storage<invaders::WeaponComponent> final : bagel::NoInstance { using type = bagel::PackedStorage<invaders::WeaponComponent>; };
 template <> struct bagel::Storage<invaders::BulletComponent> final : bagel::NoInstance { using type = bagel::TaggedStorage<invaders::BulletComponent>; };
 template <> struct bagel::Storage<invaders::AlienBulletComponent> final : bagel::NoInstance { using type = bagel::TaggedStorage<invaders::AlienBulletComponent>; };
-template <> struct bagel::Storage<invaders::DeadComponent> final : bagel::NoInstance { using type = bagel::TaggedStorage<invaders::DeadComponent>; };
