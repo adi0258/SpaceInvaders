@@ -91,6 +91,8 @@ namespace invaders {
 
     using IntentComponent = struct { bool left, right, isShooting; };
     using WeaponComponent = struct { int cooldown{ 0 }; };
+    using BulletComponent = struct {};
+    using DeadComponent = struct {};
 
 
     using AlienAIComponent = struct {
@@ -127,6 +129,7 @@ namespace invaders {
         void collision_system();
         void lifetime_system();
         void shooting_system();
+        void cleanup_system();
 
         SDL_Texture*		tex = nullptr;
         SDL_Renderer*		ren = nullptr;
@@ -143,3 +146,5 @@ template <> struct bagel::Storage<invaders::KeysComponent> final : bagel::NoInst
 template <> struct bagel::Storage<invaders::IntentComponent> final : bagel::NoInstance { using type = bagel::PackedStorage<invaders::IntentComponent>; };
 template <> struct bagel::Storage<invaders::AlienAIComponent> final : bagel::NoInstance { using type = bagel::SparseStorage<invaders::AlienAIComponent>; };
 template <> struct bagel::Storage<invaders::WeaponComponent> final : bagel::NoInstance { using type = bagel::PackedStorage<invaders::WeaponComponent>; };
+template <> struct bagel::Storage<invaders::BulletComponent> final : bagel::NoInstance { using type = bagel::TaggedStorage<invaders::BulletComponent>; };
+template <> struct bagel::Storage<invaders::DeadComponent> final : bagel::NoInstance { using type = bagel::TaggedStorage<invaders::DeadComponent>; };
