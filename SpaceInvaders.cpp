@@ -7,7 +7,6 @@ using namespace std;
 using namespace bagel;
 
 
-
 namespace invaders {
     Entity createPlayer(b2WorldId world, float x, float y) {
         b2BodyDef bodyDef = b2DefaultBodyDef();
@@ -25,38 +24,28 @@ namespace invaders {
         b2CreatePolygonShape(playerBody, &shapeDef, &poly);
 
         Entity player = Entity::create();
-        player.addAll<
-            KeysComponent,
-            IntentComponent,
-            ColliderComponent,
-            Drawable,
-            VelocityComponent,
-            Transform>(
-            KeysComponent{ SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT },
-            IntentComponent{ false, false, false },
-            ColliderComponent{ playerBody },
-            Drawable{
-                { gs::PLAYER_SPRITE_X, gs::PLAYER_SPRITE_Y, gs::PLAYER_SPRITE_W, gs::PLAYER_SPRITE_H },
-                { gs::PLAYER_DRAW_W, gs::PLAYER_DRAW_H } },
-            VelocityComponent{},
-            Transform{
-                SDL_FPoint{ x + gs::PLAYER_DRAW_HALF_W, y + gs::PLAYER_DRAW_HALF_H },
-                0.f });
+    	player.addAll<
+		KeysComponent,
+		IntentComponent,
+		ColliderComponent,
+		Drawable,
+		VelocityComponent,
+		Transform,
+		WeaponComponent>(
+		KeysComponent{ SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT },
+		IntentComponent{ false, false, false },
+		ColliderComponent{ playerBody },
+		Drawable{
+			{ gs::PLAYER_SPRITE_X, gs::PLAYER_SPRITE_Y, gs::PLAYER_SPRITE_W, gs::PLAYER_SPRITE_H },
+			{ gs::PLAYER_DRAW_W, gs::PLAYER_DRAW_H } },
+		VelocityComponent{},
+		Transform{
+			SDL_FPoint{ x + gs::PLAYER_DRAW_HALF_W, y + gs::PLAYER_DRAW_HALF_H },
+			0.f },
+		WeaponComponent{ 0 });
         return player;
     }
 
-    // ent_type createAlien(float x, float y) {
-    //     ent_type e = World::createEntity();
-    //     //World::addComponent(e, PositionComponent{ x, y });
-    //     World::addComponent(e, VelocityComponent{ gs::ALIEN_VELOCITY_X, gs::ALIEN_VELOCITY_Y });
-    //     World::addComponent(e, RenderComponent{
-    //         { gs::ALIEN_SPRITE_X, gs::ALIEN_SPRITE_Y, gs::ALIEN_SPRITE_W, gs::ALIEN_SPRITE_H },
-    //         { x, y, gs::ALIEN_SPRITE_W, gs::ALIEN_SPRITE_H },
-    //         gs::SPRITESHEET_TEXTURE_ID });
-    //     //World::addComponent(e, ColliderComponent{ gs::ALIEN_SPRITE_W, gs::ALIEN_SPRITE_H });
-    //     World::addComponent(e, AlienAIComponent{ gs::ALIEN_AI_TIME_TO_MOVE, gs::ALIEN_AI_INITIAL_DIRECTION });
-    //     return e;
-    // }
 
     // ent_type createBunker(float x, float y) {
     //     ent_type e = World::createEntity();
@@ -70,18 +59,58 @@ namespace invaders {
     //     return e;
     // }
 
-    // ent_type createBullet(float x, float y, float dy) {
-    //     ent_type e = World::createEntity();
-    //     //World::addComponent(e, PositionComponent{ x, y });
-    //     World::addComponent(e, VelocityComponent{ 0, dy });
-    //     World::addComponent(e, RenderComponent{
-    //         { gs::BULLET_SPRITE_X, gs::BULLET_SPRITE_Y, gs::BULLET_SPRITE_W, gs::BULLET_SPRITE_H },
-    //         { x, y, gs::BULLET_SPRITE_W, gs::BULLET_SPRITE_H },
-    //         gs::SPRITESHEET_TEXTURE_ID });
-    //     //World::addComponent(e, ColliderComponent{ gs::BULLET_SPRITE_W, gs::BULLET_SPRITE_H });
-    //     //World::addComponent(e, DamageComponent{ gs::BULLET_DAMAGE });
-    //     return e;
-    // }
+	Entity createAlien(b2WorldId world, float x, float y) {
+    b2BodyDef bodyDef = b2DefaultBodyDef();
+    bodyDef.type = b2_kinematicBody; // גוף קינמטי שלא מושפע מכבידה
+    bodyDef.position = { x / gs::BOX_SCALE, y / gs::BOX_SCALE };
+    b2BodyId body = b2CreateBody(world, &bodyDef);
+
+    b2ShapeDef shapeDef = b2DefaultShapeDef();
+    b2Polygon poly = b2MakeBox((gs::ALIEN_SPRITE_W * 2.f) / gs::BOX_SCALE, (gs::ALIEN_SPRITE_H * 2.f) / gs::BOX_SCALE);
+    b2CreatePolygonShape(body, &shapeDef, &poly);
+
+    Entity alien = Entity::create();
+    alien.addAll<ColliderComponent, Drawable, VelocityComponent, Transform, AlienAIComponent>(
+        ColliderComponent{ body },
+        Drawable{
+            { gs::ALIEN_SPRITE_X, gs::ALIEN_SPRITE_Y, gs::ALIEN_SPRITE_W, gs::ALIEN_SPRITE_H },
+            { gs::ALIEN_SPRITE_W * 4.f, gs::ALIEN_SPRITE_H * 4.f } // הגדלנו פי 4 לציור
+        },
+        VelocityComponent{ gs::ALIEN_VELOCITY_X, gs::ALIEN_VELOCITY_Y },
+        Transform{ SDL_FPoint{x, y}, 0.f },
+        AlienAIComponent{ gs::ALIEN_AI_TIME_TO_MOVE, gs::ALIEN_AI_INITIAL_DIRECTION }
+    );
+
+    // נותנים לחייזר מהירות התחלתית
+    b2Body_SetLinearVelocity(body, { gs::ALIEN_VELOCITY_X * 10.f, gs::ALIEN_VELOCITY_Y });
+    return alien;
+}
+
+Entity createBullet(b2WorldId world, float x, float y, float dy) {
+    b2BodyDef bodyDef = b2DefaultBodyDef();
+    bodyDef.type = b2_kinematicBody;
+    bodyDef.position = { x / gs::BOX_SCALE, y / gs::BOX_SCALE };
+    b2BodyId body = b2CreateBody(world, &bodyDef);
+
+    b2ShapeDef shapeDef = b2DefaultShapeDef();
+    shapeDef.isSensor = true; // הקליע הוא סנסור, הוא לא ידחוף פיזית שחקנים/חייזרים
+    b2Polygon poly = b2MakeBox((gs::BULLET_SPRITE_W) / gs::BOX_SCALE, (gs::BULLET_SPRITE_H) / gs::BOX_SCALE);
+    b2CreatePolygonShape(body, &shapeDef, &poly);
+
+    Entity bullet = Entity::create();
+    bullet.addAll<ColliderComponent, Drawable, Transform>(
+        ColliderComponent{ body },
+        Drawable{
+            { gs::BULLET_SPRITE_X, gs::BULLET_SPRITE_Y, gs::BULLET_SPRITE_W, gs::BULLET_SPRITE_H },
+            { gs::BULLET_SPRITE_W * 2.f, gs::BULLET_SPRITE_H * 2.f }
+        },
+        Transform{ SDL_FPoint{x, y}, 0.f }
+    );
+
+    // קובעים את מהירות הקליע כלפי מעלה
+    b2Body_SetLinearVelocity(body, { 0.f, dy });
+    return bullet;
+}
 
     // ent_type createExplosion(float x, float y) {
     //     ent_type e = World::createEntity();
@@ -179,20 +208,69 @@ namespace invaders {
 		}
 	}
 
+	void SpaceInvaders::shooting_system() {
+    	static const Mask mask = MaskBuilder()
+			.set<IntentComponent>()
+			.set<Transform>()
+			.set<WeaponComponent>()
+			.build();
+
+    	for (Entity e = Entity::first(); !e.eof(); e.next()) {
+    		if (e.test(mask)) {
+    			const auto& intent = e.get<IntentComponent>();
+    			const auto& t = e.get<Transform>();
+    			auto& weapon = e.get<WeaponComponent>();
+
+    			if (weapon.cooldown > 0) {
+    				weapon.cooldown--;
+    			}
+    			else if (intent.isShooting) {
+    				// יוצרים קליע בדיוק מעל השחקן
+    				createBullet(box, t.p.x, t.p.y - 20.f, -40.f);
+    				weapon.cooldown = 20; // מגדירים Cooldown לכ-1/3 שנייה (ב-60 FPS)
+    			}
+    		}
+    	}
+    }
+
+	void SpaceInvaders::alien_ai_system() {
+    	static const Mask mask = MaskBuilder()
+			.set<Transform>()
+			.set<ColliderComponent>()
+			.set<AlienAIComponent>()
+			.build();
+
+    	for (Entity e = Entity::first(); !e.eof(); e.next()) {
+    		if (e.test(mask)) {
+    			auto& ai = e.get<AlienAIComponent>();
+    			const auto& t = e.get<Transform>();
+    			const auto& c = e.get<ColliderComponent>();
+
+    			// היפוך כיוון פשוט כשהחייזר מגיע לקצוות המסך
+    			if (t.p.x < 50.f) ai.direction = 1;
+    			if (t.p.x > WIN_W - 50.f) ai.direction = -1;
+
+    			b2Body_SetLinearVelocity(c.body, { ai.direction * 15.f, 0.f });
+    		}
+    	}
+    }
+
     void SpaceInvaders::run()
 	{
-		auto start = SDL_GetTicks();
-		bool quit = false;
+    	auto start = SDL_GetTicks();
+    	bool quit = false;
 
-		while (!quit) {
-			// update all systems (except draw)
-			input_system();
-			movement_system();
-			box_system();
+    	while (!quit) {
+    		// update all systems (except draw)
+    		input_system();
+    		movement_system();
+    		shooting_system();
+    		alien_ai_system();
+    		box_system();
 
-			SDL_RenderClear(ren);
-			draw_system();
-			SDL_RenderPresent(ren);
+    		SDL_RenderClear(ren);
+    		draw_system();
+    		SDL_RenderPresent(ren);
 
 			const auto end = SDL_GetTicks();
 			if (end-start < GAME_FRAME) {
@@ -274,6 +352,8 @@ namespace invaders {
         createPlayer(box,
             WIN_W_MID - gs::PLAYER_DRAW_HALF_W,
             WIN_H - gs::PLAYER_DRAW_H);
+
+    	createAlien(box, WIN_W_MID, 100.f);
 
     }
 

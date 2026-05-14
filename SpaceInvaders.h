@@ -90,6 +90,7 @@ namespace invaders {
     using KeysComponent = struct { SDL_Scancode left, right; };//TODO: LOOK INTO SAVING PREVIOUS STATE
 
     using IntentComponent = struct { bool left, right, isShooting; };
+    using WeaponComponent = struct { int cooldown{ 0 }; };
 
 
     using AlienAIComponent = struct {
@@ -99,8 +100,8 @@ namespace invaders {
 
 
     Entity createPlayer(b2WorldId world, float x, float y);
-    ent_type createAlien(float x, float y);
-    ent_type createBullet(float x, float y, float dy);
+    Entity createAlien(b2WorldId world, float x, float y);
+    Entity createBullet(b2WorldId world, float x, float y, float dy);
 
     class SpaceInvaders
     {
@@ -125,6 +126,7 @@ namespace invaders {
         void alien_ai_system();
         void collision_system();
         void lifetime_system();
+        void shooting_system();
 
         SDL_Texture*		tex = nullptr;
         SDL_Renderer*		ren = nullptr;
@@ -140,3 +142,4 @@ template <> struct bagel::Storage<invaders::ColliderComponent> final : bagel::No
 template <> struct bagel::Storage<invaders::KeysComponent> final : bagel::NoInstance { using type = bagel::PackedStorage<invaders::KeysComponent>; };
 template <> struct bagel::Storage<invaders::IntentComponent> final : bagel::NoInstance { using type = bagel::PackedStorage<invaders::IntentComponent>; };
 template <> struct bagel::Storage<invaders::AlienAIComponent> final : bagel::NoInstance { using type = bagel::SparseStorage<invaders::AlienAIComponent>; };
+template <> struct bagel::Storage<invaders::WeaponComponent> final : bagel::NoInstance { using type = bagel::PackedStorage<invaders::WeaponComponent>; };
