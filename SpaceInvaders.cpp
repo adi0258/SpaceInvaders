@@ -10,12 +10,13 @@ namespace invaders {
 
     Entity createPlayer(b2WorldId world, float x, float y) {
         b2BodyDef bodyDef = b2DefaultBodyDef();
-        bodyDef.type = b2_dynamicBody;
+        bodyDef.type = b2_kinematicBody;
 
         bodyDef.position = {
             (x + gs::PLAYER_DRAW_HALF_W) / gs::BOX_SCALE,
             (y + gs::PLAYER_DRAW_HALF_H) / gs::BOX_SCALE };
         b2BodyId playerBody = b2CreateBody(world, &bodyDef);
+
 
         b2ShapeDef shapeDef = b2DefaultShapeDef();
         shapeDef.density = gs::PLAYER_BODY_DENSITY;
@@ -82,13 +83,13 @@ namespace invaders {
         b2BodyDef bodyDef = b2DefaultBodyDef();
         bodyDef.type = b2_dynamicBody;
         bodyDef.gravityScale = 0.0f;
-        bodyDef.isBullet = true; //to avoid skipping the alien
+        bodyDef.isBullet = true;
         bodyDef.userData = (void*)(uintptr_t)bullet.entity().id;
         bodyDef.position = { x / gs::BOX_SCALE, y / gs::BOX_SCALE };
         b2BodyId body = b2CreateBody(world, &bodyDef);
 
         b2ShapeDef shapeDef = b2DefaultShapeDef();
-        shapeDef.density = 1.0f; //giving density to bullet in order for the engine to not treat it as static (so collision isnt missed)
+        shapeDef.density = 1.0f;
         b2Polygon poly = b2MakeBox((gs::BULLET_SPRITE_W) / gs::BOX_SCALE, (gs::BULLET_SPRITE_H) / gs::BOX_SCALE);
         b2CreatePolygonShape(body, &shapeDef, &poly);
 
@@ -100,6 +101,36 @@ namespace invaders {
             },
             Transform{ SDL_FPoint{x, y}, 0.f },
             BulletComponent{}
+        );
+
+        b2Body_SetLinearVelocity(body, { 0.f, dy });
+        return bullet;
+    }
+
+    Entity createAlienBullet(b2WorldId world, float x, float y, float dy) {
+        Entity bullet = Entity::create();
+
+        b2BodyDef bodyDef = b2DefaultBodyDef();
+        bodyDef.type = b2_dynamicBody;
+        bodyDef.gravityScale = 0.0f;
+        bodyDef.isBullet = true;
+        bodyDef.userData = (void*)(uintptr_t)bullet.entity().id;
+        bodyDef.position = { x / gs::BOX_SCALE, y / gs::BOX_SCALE };
+        b2BodyId body = b2CreateBody(world, &bodyDef);
+
+        b2ShapeDef shapeDef = b2DefaultShapeDef();
+        shapeDef.density = 1.0f;
+        b2Polygon poly = b2MakeBox((gs::BULLET_SPRITE_W) / gs::BOX_SCALE, (gs::BULLET_SPRITE_H) / gs::BOX_SCALE);
+        b2CreatePolygonShape(body, &shapeDef, &poly);
+
+        bullet.addAll<ColliderComponent, Drawable, Transform, AlienBulletComponent>(
+            ColliderComponent{ body },
+            Drawable{
+               { gs::BULLET_SPRITE_X, gs::BULLET_SPRITE_Y, gs::BULLET_SPRITE_W, gs::BULLET_SPRITE_H },
+               { gs::BULLET_SPRITE_W * 2.f, gs::BULLET_SPRITE_H * 2.f }
+            },
+            Transform{ SDL_FPoint{x, y}, 0.f },
+            AlienBulletComponent{}
         );
 
         b2Body_SetLinearVelocity(body, { 0.f, dy });
@@ -215,6 +246,45 @@ namespace invaders {
         }
     }
 
+    void SpaceInvaders::alien_shooting_system() {
+        static int shootTimer = SDL_rand(181);
+
+        if (shootTimer > 0) {
+            shootTimer--;
+            return;
+        }
+
+        static const Mask mask = MaskBuilder()
+            .set<Transform>()
+            .set<AlienAIComponent>()
+            .build();
+
+        int count = 0;
+        for (Entity e = Entity::first(); !e.eof(); e.next()) {
+            if (e.test(mask) && !e.has<DeadComponent>()) {
+                count++;
+            }
+        }
+
+        if (count == 0) return;
+
+        int chosenIndex = SDL_rand(count);
+        int currentIndex = 0;
+
+        for (Entity e = Entity::first(); !e.eof(); e.next()) {
+            if (e.test(mask) && !e.has<DeadComponent>()) {
+                if (currentIndex == chosenIndex) {
+                    const auto& t = e.get<Transform>();
+                    createAlienBullet(box, t.p.x, t.p.y + 20.f, 25.f);
+                    break;
+                }
+                currentIndex++;
+            }
+        }
+
+        shootTimer = SDL_rand(181);
+    }
+
     void SpaceInvaders::alien_ai_system() {
         static const Mask mask = MaskBuilder()
             .set<Transform>()
@@ -226,7 +296,7 @@ namespace invaders {
         int newDirection = 0;
 
         for (Entity e = Entity::first(); !e.eof(); e.next()) {
-            if (e.test(mask)) {
+            if (e.test(mask) && !e.has<DeadComponent>()) {
                 const auto& t = e.get<Transform>();
                 const auto& ai = e.get<AlienAIComponent>();
 
@@ -244,7 +314,7 @@ namespace invaders {
         }
 
         for (Entity e = Entity::first(); !e.eof(); e.next()) {
-            if (e.test(mask)) {
+            if (e.test(mask) && !e.has<DeadComponent>()) {
                 auto& ai = e.get<AlienAIComponent>();
                 const auto& c = e.get<ColliderComponent>();
 
@@ -282,7 +352,6 @@ namespace invaders {
                         if (dx < 19.0f && dy < 24.0f) {
                             eBullet.add(DeadComponent{});
                             eAlien.add(DeadComponent{});
-
                             break;
                         }
                     }
@@ -292,13 +361,25 @@ namespace invaders {
     }
 
     void SpaceInvaders::cleanup_system() {
-        static const Mask mask = MaskBuilder()
+        // Clear Out-Of-Bounds items
+        static const Mask transformMask = MaskBuilder().set<Transform>().build();
+        for (Entity e = Entity::first(); !e.eof(); e.next()) {
+            if (e.test(transformMask) && !e.has<DeadComponent>()) {
+                const auto& t = e.get<Transform>();
+                if (t.p.y > WIN_H + 100.f || t.p.y < -100.f) {
+                    e.add(DeadComponent{});
+                }
+            }
+        }
+
+        // Destroy Dead entities
+        static const Mask deadMask = MaskBuilder()
             .set<ColliderComponent>()
             .set<DeadComponent>()
             .build();
 
         for (Entity e = Entity::first(); !e.eof(); e.next()) {
-            if (e.test(mask)) {
+            if (e.test(deadMask)) {
                 b2DestroyBody(e.get<ColliderComponent>().body);
                 e.destroy();
             }
@@ -315,6 +396,7 @@ namespace invaders {
             movement_system();
             shooting_system();
             alien_ai_system();
+            alien_shooting_system();
             box_system();
             collision_system();
             cleanup_system();
@@ -424,5 +506,4 @@ namespace invaders {
 
         SDL_Quit();
     }
-
 }

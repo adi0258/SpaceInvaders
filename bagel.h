@@ -214,8 +214,10 @@ namespace bagel
 			Mask m = _masks[ent.id];
 			int ctz;
 			while ((ctz = m.ctz()) >= 0) {
-				if (_deleters[ctz] != nullptr)
+				//bounds check to avoid crashing on empty tagged storages
+				if (ctz < _deleters.size() && _deleters[ctz] != nullptr) {
 					_deleters[ctz](ent);
+				}
 				m.clear(Mask::bit(ctz));
 			}
 			_masks[ent.id].clear();
