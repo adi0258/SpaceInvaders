@@ -7,6 +7,7 @@ using namespace std;
 using namespace bagel;
 
 
+
 namespace invaders {
     Entity createPlayer(b2WorldId world, float x, float y) {
         b2BodyDef bodyDef = b2DefaultBodyDef();
