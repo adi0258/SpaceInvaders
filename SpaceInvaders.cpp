@@ -274,7 +274,7 @@ namespace invaders {
 
         int count = 0;
         for (Entity e = Entity::first(); !e.eof(); e.next()) {
-            if (e.test(mask) && !e.has<DeadComponent>()) {
+            if (e.test(mask)) {
                 count++;
             }
         }
@@ -285,7 +285,7 @@ namespace invaders {
         int currentIndex = 0;
 
         for (Entity e = Entity::first(); !e.eof(); e.next()) {
-            if (e.test(mask) && !e.has<DeadComponent>()) {
+            if (e.test(mask)) {
                 if (currentIndex == chosenIndex) {
                     const auto& t = e.get<Transform>();
                     createAlienBullet(box, t.p.x, t.p.y + 20.f, 25.f);
@@ -309,7 +309,7 @@ namespace invaders {
         int newDirection = 0;
 
         for (Entity e = Entity::first(); !e.eof(); e.next()) {
-            if (e.test(mask) && !e.has<DeadComponent>()) {
+            if (e.test(mask)) {
                 const auto& t = e.get<Transform>();
                 const auto& ai = e.get<AlienAIComponent>();
 
@@ -327,7 +327,7 @@ namespace invaders {
         }
 
         for (Entity e = Entity::first(); !e.eof(); e.next()) {
-            if (e.test(mask) && !e.has<DeadComponent>()) {
+            if (e.test(mask)) {
                 auto& ai = e.get<AlienAIComponent>();
                 const auto& c = e.get<ColliderComponent>();
 
@@ -373,7 +373,7 @@ namespace invaders {
         // Clear Out-Of-Bounds items
         static const Mask transformMask = MaskBuilder().set<Transform>().build();
         for (Entity e = Entity::first(); !e.eof(); e.next()) {
-            if (e.test(transformMask) && !e.has<DeadComponent>()) {
+            if (e.test(transformMask) ) {
                 const auto& t = e.get<Transform>();
                 if (t.p.y > WIN_H + 100.f || t.p.y < -100.f) {
                     b2DestroyBody(e.get<ColliderComponent>().body);
