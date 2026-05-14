@@ -10,7 +10,8 @@ using namespace bagel;
 namespace invaders {
     Entity createPlayer(b2WorldId world, float x, float y) {
         b2BodyDef bodyDef = b2DefaultBodyDef();
-        bodyDef.type = b2_kinematicBody;
+    	bodyDef.type = b2_dynamicBody;
+
         bodyDef.position = {
             (x + gs::PLAYER_DRAW_HALF_W) / gs::BOX_SCALE,
             (y + gs::PLAYER_DRAW_HALF_H) / gs::BOX_SCALE };
