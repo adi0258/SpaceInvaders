@@ -71,6 +71,7 @@ namespace invaders {
     using WeaponComponent = struct { int cooldown{ 0 }; };
     using BulletComponent = struct {};
     using AlienBulletComponent = struct {};
+    using LivesComponent = struct { int lives{ 3 }; };
 
     using AlienAIComponent = struct {
         float timeToMove{ 1.0f };

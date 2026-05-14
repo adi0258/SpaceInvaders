@@ -20,6 +20,7 @@ namespace invaders {
 
         b2ShapeDef shapeDef = b2DefaultShapeDef();
         shapeDef.density = gs::PLAYER_BODY_DENSITY;
+        shapeDef.enableSensorEvents = true;
         b2Polygon poly = b2MakeBox(
             gs::PLAYER_DRAW_HALF_W / gs::BOX_SCALE,
             gs::PLAYER_DRAW_HALF_H / gs::BOX_SCALE);
@@ -27,6 +28,7 @@ namespace invaders {
 
         Entity player = Entity::create();
         player.addAll<
+        LivesComponent,
             KeysComponent,
             IntentComponent,
             ColliderComponent,
@@ -34,6 +36,7 @@ namespace invaders {
             VelocityComponent,
             Transform,
             WeaponComponent>(
+            LivesComponent{ gs::PLAYER_INITIAL_HP },
             KeysComponent{ SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT },
             IntentComponent{ false, false, false },
             ColliderComponent{ playerBody },
@@ -360,11 +363,24 @@ namespace invaders {
 
             Entity sensorEntity{ ent_type{ static_cast<id_type>(reinterpret_cast<uintptr_t>(b2Body_GetUserData(sensorBody))) } };
             Entity visitorEntity{ ent_type{ static_cast<id_type>(reinterpret_cast<uintptr_t>(b2Body_GetUserData(visitorBody))) } };
+            
+
             if (sensorEntity.has<BulletComponent>() && visitorEntity.has<AlienAIComponent>()) {
                 b2DestroyBody(sensorBody);
-                b2DestroyBody(visitorBody);
                 sensorEntity.destroy();
+                b2DestroyBody(visitorBody);
                 visitorEntity.destroy();
+            }
+            else if (visitorEntity.has<LivesComponent>() && sensorEntity.has<AlienBulletComponent>()) {
+                auto& lives = visitorEntity.get<LivesComponent>();
+                lives.lives--;
+                if (lives.lives <= 0) {
+                    b2DestroyBody(sensorBody);
+                    sensorEntity.destroy();
+                    b2DestroyBody(visitorBody);
+                    visitorEntity.destroy();
+                    return;
+                }
             }
         }
     }
