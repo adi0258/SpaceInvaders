@@ -93,10 +93,32 @@ constexpr Uint64 kMsPerSprite = 3000;
 
 struct SpritePreviewEntry {
 	const char* label;
+	SDL_Texture* atlas;
 	SDL_FRect src;
 	float destW;
 	float destH;
 };
+
+SDL_FPoint hudPreviewDestSize(const SDL_Rect& src, float maxW)
+{
+	const float w = (float)src.w;
+	const float h = (float)src.h;
+	if (w <= maxW)
+		return { w, h };
+	const float s = maxW / w;
+	return { w * s, h * s };
+}
+
+SDL_FRect rectToFRect(const SDL_Rect& r)
+{
+	return { (float)r.x, (float)r.y, (float)r.w, (float)r.h };
+}
+
+SpritePreviewEntry makeHudPreviewEntry(const char* label, SDL_Texture* atlas, const SDL_Rect& src, float maxHudW)
+{
+	const SDL_FPoint d = hudPreviewDestSize(src, maxHudW);
+	return { label, atlas, rectToFRect(src), d.x, d.y };
+}
 
 } // namespace
 
@@ -110,39 +132,10 @@ void run_sprite_atlas_preview_test()
 	const float explosionDrawW = gs::EXPLOSION_SPRITE_W * 4.f;
 	const float explosionDrawH = gs::EXPLOSION_SPRITE_H * 4.f;
 
-	const SpritePreviewEntry entries[] = {
-		{ "player",
-		  { gs::PLAYER_SPRITE_X, gs::PLAYER_SPRITE_Y, gs::PLAYER_SPRITE_W, gs::PLAYER_SPRITE_H },
-		  gs::PLAYER_DRAW_W, gs::PLAYER_DRAW_H },
-		{ "player_destruction_1",
-		  { gs::PLAYER_DESTRUCTION_1_SPRITE_X, gs::PLAYER_DESTRUCTION_1_SPRITE_Y, gs::PLAYER_DESTRUCTION_1_SPRITE_W, gs::PLAYER_DESTRUCTION_1_SPRITE_H },
-		  gs::PLAYER_DRAW_W, gs::PLAYER_DRAW_H },
-		{ "player_destruction_2",
-		  { gs::PLAYER_DESTRUCTION_2_SPRITE_X, gs::PLAYER_DESTRUCTION_2_SPRITE_Y, gs::PLAYER_DESTRUCTION_2_SPRITE_W, gs::PLAYER_DESTRUCTION_2_SPRITE_H },
-		  gs::PLAYER_DRAW_W, gs::PLAYER_DRAW_H },
-		{ "player_destruction_3",
-		  { gs::PLAYER_DESTRUCTION_3_SPRITE_X, gs::PLAYER_DESTRUCTION_3_SPRITE_Y, gs::PLAYER_DESTRUCTION_3_SPRITE_W, gs::PLAYER_DESTRUCTION_3_SPRITE_H },
-		  gs::PLAYER_DRAW_W, gs::PLAYER_DRAW_H },
-		{ "alien",
-		  { gs::ALIEN_SPRITE_X, gs::ALIEN_SPRITE_Y, gs::ALIEN_SPRITE_W, gs::ALIEN_SPRITE_H },
-		  alienDrawW, alienDrawH },
-		{ "alien_destruction",
-		  { gs::ALIEN_DESTRUCTION_SPRITE_X, gs::ALIEN_DESTRUCTION_SPRITE_Y, gs::ALIEN_DESTRUCTION_SPRITE_W, gs::ALIEN_DESTRUCTION_SPRITE_H },
-		  alienDrawW, alienDrawH },
-		{ "bunker",
-		  { gs::BUNKER_SPRITE_X, gs::BUNKER_SPRITE_Y, gs::BUNKER_SPRITE_W, gs::BUNKER_SPRITE_H },
-		  bunkerDrawW, bunkerDrawH },
-		{ "bullet",
-		  { gs::BULLET_SPRITE_X, gs::BULLET_SPRITE_Y, gs::BULLET_SPRITE_W, gs::BULLET_SPRITE_H },
-		  gs::BULLET_SPRITE_W * 2.f, gs::BULLET_SPRITE_H * 2.f },
-		{ "explosion",
-		  { gs::EXPLOSION_SPRITE_X, gs::EXPLOSION_SPRITE_Y, gs::EXPLOSION_SPRITE_W, gs::EXPLOSION_SPRITE_H },
-		  explosionDrawW, explosionDrawH },
-	};
-
 	SDL_Window* win = nullptr;
 	SDL_Renderer* ren = nullptr;
 	SDL_Texture* tex = nullptr;
+	SDL_Texture* hudTex = nullptr;
 
 	if (!SDL_Init(SDL_INIT_VIDEO)) {
 		cout << "run_sprite_atlas_preview_test: SDL_Init failed: " << SDL_GetError() << endl;
@@ -174,6 +167,56 @@ void run_sprite_atlas_preview_test()
 		return;
 	}
 
+	SDL_Surface* hudSurf = IMG_Load(gs::HUD_SPRITE_SHEET_PATH);
+	if (hudSurf == nullptr) {
+		cout << "run_sprite_atlas_preview_test: IMG_Load failed for " << gs::HUD_SPRITE_SHEET_PATH << ": " << SDL_GetError() << endl;
+		SDL_DestroyTexture(tex);
+		SDL_DestroyRenderer(ren);
+		SDL_DestroyWindow(win);
+		SDL_Quit();
+		return;
+	}
+	hudTex = SDL_CreateTextureFromSurface(ren, hudSurf);
+	SDL_DestroySurface(hudSurf);
+	if (hudTex == nullptr) {
+		cout << "run_sprite_atlas_preview_test: SDL_CreateTextureFromSurface (HUD) failed: " << SDL_GetError() << endl;
+		SDL_DestroyTexture(tex);
+		SDL_DestroyRenderer(ren);
+		SDL_DestroyWindow(win);
+		SDL_Quit();
+		return;
+	}
+
+	const float maxHudPreviewW = kPreviewWinW * 0.92f;
+
+	const SpritePreviewEntry entries[] = {
+		{ "player", tex,
+		  { gs::PLAYER_SPRITE_X, gs::PLAYER_SPRITE_Y, gs::PLAYER_SPRITE_W, gs::PLAYER_SPRITE_H },
+		  gs::PLAYER_DRAW_W, gs::PLAYER_DRAW_H },
+		{ "player_destruction_1", tex,
+		  { gs::PLAYER_DESTRUCTION_1_SPRITE_X, gs::PLAYER_DESTRUCTION_1_SPRITE_Y, gs::PLAYER_DESTRUCTION_1_SPRITE_W, gs::PLAYER_DESTRUCTION_1_SPRITE_H },
+		  gs::PLAYER_DRAW_W, gs::PLAYER_DRAW_H },
+		{ "player_destruction_2", tex,
+		  { gs::PLAYER_DESTRUCTION_2_SPRITE_X, gs::PLAYER_DESTRUCTION_2_SPRITE_Y, gs::PLAYER_DESTRUCTION_2_SPRITE_W, gs::PLAYER_DESTRUCTION_2_SPRITE_H },
+		  gs::PLAYER_DRAW_W, gs::PLAYER_DRAW_H },
+		{ "player_destruction_3", tex,
+		  { gs::PLAYER_DESTRUCTION_3_SPRITE_X, gs::PLAYER_DESTRUCTION_3_SPRITE_Y, gs::PLAYER_DESTRUCTION_3_SPRITE_W, gs::PLAYER_DESTRUCTION_3_SPRITE_H },
+		  gs::PLAYER_DRAW_W, gs::PLAYER_DRAW_H },
+		{ "alien", tex,
+		  { gs::ALIEN_SPRITE_X, gs::ALIEN_SPRITE_Y, gs::ALIEN_SPRITE_W, gs::ALIEN_SPRITE_H },
+		  alienDrawW, alienDrawH },
+		{ "alien_destruction", tex,
+		  { gs::ALIEN_DESTRUCTION_SPRITE_X, gs::ALIEN_DESTRUCTION_SPRITE_Y, gs::ALIEN_DESTRUCTION_SPRITE_W, gs::ALIEN_DESTRUCTION_SPRITE_H },
+		  alienDrawW, alienDrawH },
+		makeHudPreviewEntry("hud_lives", hudTex, gs::HUD_SRC_LIVES, maxHudPreviewW),
+		makeHudPreviewEntry("hud_game_over", hudTex, gs::HUD_SRC_GAME_OVER, maxHudPreviewW),
+		makeHudPreviewEntry("hud_start_game", hudTex, gs::HUD_SRC_START_GAME, maxHudPreviewW),
+		makeHudPreviewEntry("hud_hearts_3", hudTex, gs::HUD_SRC_HEARTS_3, maxHudPreviewW),
+		makeHudPreviewEntry("hud_hearts_2", hudTex, gs::HUD_SRC_HEARTS_2, maxHudPreviewW),
+		makeHudPreviewEntry("hud_hearts_1", hudTex, gs::HUD_SRC_HEARTS_1, maxHudPreviewW),
+		makeHudPreviewEntry("hud_hearts_0", hudTex, gs::HUD_SRC_HEARTS_0, maxHudPreviewW),
+	};
+
 	SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
 
 	const float cx = kPreviewWinW * 0.5f;
@@ -201,12 +244,13 @@ void run_sprite_atlas_preview_test()
 				cy - e.destH * 0.5f,
 				e.destW,
 				e.destH };
-			SDL_RenderTextureRotated(ren, tex, &e.src, &dest, 0.f, nullptr, SDL_FLIP_NONE);
+			SDL_RenderTextureRotated(ren, e.atlas, &e.src, &dest, 0.f, nullptr, SDL_FLIP_NONE);
 			SDL_RenderPresent(ren);
 			SDL_Delay(16);
 		}
 	}
 
+	SDL_DestroyTexture(hudTex);
 	SDL_DestroyTexture(tex);
 	SDL_DestroyRenderer(ren);
 	SDL_DestroyWindow(win);

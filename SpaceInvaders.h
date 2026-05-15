@@ -93,6 +93,20 @@ namespace invaders {
         constexpr float EXPLOSION_SPRITE_W = 13.f;
         constexpr float EXPLOSION_SPRITE_H = 8.f;
         constexpr float EXPLOSION_LIFETIME_SEC = 0.5f;
+
+        // res/hud_sprite_sheet.png — 2196x1952; srcrect for SDL_RenderTexture (tight bounds on atlas).
+        inline constexpr const char* HUD_SPRITE_SHEET_PATH = "res/hud_sprite_sheet.png";
+        inline constexpr int HUD_SHEET_W = 2196;
+        inline constexpr int HUD_SHEET_H = 1952;
+
+        inline constexpr SDL_Rect HUD_SRC_LIVES{ 26, 367, 365, 133 };
+        inline constexpr SDL_Rect HUD_SRC_GAME_OVER{ 28, 1053, 1132, 129 };
+        inline constexpr SDL_Rect HUD_SRC_START_GAME{ 29, 1310, 2011, 108 };
+        // Precomposed life rows: N = number of filled hearts (0 = empty outline only).
+        inline constexpr SDL_Rect HUD_SRC_HEARTS_3{ 7, 450, 562, 200 };
+        inline constexpr SDL_Rect HUD_SRC_HEARTS_2{ 10, 712, 362, 168 };
+        inline constexpr SDL_Rect HUD_SRC_HEARTS_1{ 626, 712, 174, 168 };
+        inline constexpr SDL_Rect HUD_SRC_HEARTS_0{ 384, 712, 175, 168 };
     }
 
     using Transform = struct { SDL_FPoint p; float a; };
