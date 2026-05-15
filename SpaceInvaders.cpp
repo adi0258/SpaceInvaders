@@ -440,6 +440,7 @@ namespace invaders {
                 visitorEntity.add<DestructionComponent>(DestructionComponent{ 0, 3, 1});
                 b2Shape_EnableSensorEvents(visitorEntity.get<ColliderComponent>().shape, false);
                 visitorEntity.del<WeaponComponent>();
+                
             }
         }
     }
@@ -509,15 +510,51 @@ namespace invaders {
                 auto& lives = e.get<LivesComponent>();
 
                 if (d.currentDestructionStage > d.totalDestructionStages) {
-                    // If player has no lives left, destroy player
+                    // If player has no lives left, game over: HUD + destroy all entities except HUD
                     if (lives.lives <= 0) {
-                        b2DestroyBody(c.body);
-                        e.destroy();
+                        HudEntity.get<GameStateComponent>().state = 2;
+                        auto& hudDrawGo = HudEntity.get<Drawable>();
+                        const auto& goSrc = gs::HUD_SRC_GAME_OVER;
+                        hudDrawGo.part = { static_cast<float>(goSrc.x), static_cast<float>(goSrc.y),
+                            static_cast<float>(goSrc.w), static_cast<float>(goSrc.h) };
+                        const float goDrawW = static_cast<float>(WIN_W) * gs::HUD_TITLE_MAX_DRAW_W_FRAC;
+                        hudDrawGo.size = { goDrawW, goDrawW * static_cast<float>(goSrc.h) / static_cast<float>(goSrc.w) };
+
+                        for (Entity ent = Entity::first(); !ent.eof(); ent.next()) {
+                            if (ent.entity().id == HudEntity.entity().id)
+                                continue;
+                            if (ent.mask().ctz() < 0)
+                                continue;
+                            if (ent.has<ColliderComponent>())
+                                b2DestroyBody(ent.get<ColliderComponent>().body);
+                            ent.destroy();
+                        }
                         return;
                     }
                     // If player has lives left, decrement lives and reset destruction component
                     else {
                         lives.lives--;
+                        auto& hudDraw = HudEntity.get<Drawable>();
+                        switch (lives.lives) {
+                            case 2: {
+                                const auto& r = gs::HUD_SRC_HEARTS_2;
+                                hudDraw.part = { static_cast<float>(r.x), static_cast<float>(r.y), static_cast<float>(r.w), static_cast<float>(r.h) };
+                                break;
+                            }
+                            case 1: {
+                                const auto& r = gs::HUD_SRC_HEARTS_1;
+                                hudDraw.part = { static_cast<float>(r.x), static_cast<float>(r.y), static_cast<float>(r.w), static_cast<float>(r.h) };
+                                break;
+                            }
+                            case 0:
+                            default: {
+                                const auto& r = gs::HUD_SRC_HEARTS_0;
+                                hudDraw.part = { static_cast<float>(r.x), static_cast<float>(r.y), static_cast<float>(r.w), static_cast<float>(r.h) };
+                                break;
+                            }
+                        }
+                        hudDraw.size = { gs::HUD_HEARTS_MAX_DRAW_W, gs::HUD_HEARTS_MAX_DRAW_W * hudDraw.part.h / hudDraw.part.w };
+
                         e.del<DestructionComponent>();
                         e.get<Drawable>().part = { gs::PLAYER_SPRITE_X, gs::PLAYER_SPRITE_Y, gs::PLAYER_SPRITE_W, gs::PLAYER_SPRITE_H };
                         e.add<WeaponComponent>(WeaponComponent{ 0 });
