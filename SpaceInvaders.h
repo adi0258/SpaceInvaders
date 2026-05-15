@@ -33,6 +33,7 @@ namespace invaders {
         constexpr float PLAYER_DRAW_HALF_H = PLAYER_DRAW_H * 0.5f;
         constexpr int PLAYER_INITIAL_HP = 3;
         constexpr float PLAYER_BODY_DENSITY = 1.f;
+        constexpr int PLAYER_INVULNERABLE_FRAMES = 120;
 
         // Player ship row on alternate_space_invaders_sprite_sheet.png: four 16px-spaced
         // columns at x = 1, 17, 33, 49 (intact at 1,20,13,8 then three follow-on frames).
@@ -105,6 +106,7 @@ namespace invaders {
     using AlienBulletComponent = struct {};
     using LivesComponent = struct { int lives{ 3 }; };
     using DestructionComponent = struct { int currentDestructionStage{ 0 }, totalDestructionStages{ 3 }, framesToNextStage{ gs::PLAYER_DESTRUCTION_FRAMES_TO_NEXT_STAGE }; };
+    using InvulnerableComponent = struct { int ttl; };
 
     using AlienAIComponent = struct {
         float timeToMove{ 1.0f };
@@ -143,6 +145,7 @@ namespace invaders {
         void cleanup_system();
         void alien_destruction_system();
         void player_destruction_system();
+        void invulnerability_system();
 
         SDL_Texture*		tex = nullptr;
         SDL_Renderer*		ren = nullptr;
@@ -161,3 +164,6 @@ template <> struct bagel::Storage<invaders::AlienAIComponent> final : bagel::NoI
 template <> struct bagel::Storage<invaders::WeaponComponent> final : bagel::NoInstance { using type = bagel::PackedStorage<invaders::WeaponComponent>; };
 template <> struct bagel::Storage<invaders::BulletComponent> final : bagel::NoInstance { using type = bagel::TaggedStorage<invaders::BulletComponent>; };
 template <> struct bagel::Storage<invaders::AlienBulletComponent> final : bagel::NoInstance { using type = bagel::TaggedStorage<invaders::AlienBulletComponent>; };
+template <> struct bagel::Storage<invaders::LivesComponent> final : bagel::NoInstance { using type = bagel::PackedStorage<invaders::LivesComponent>; };
+template <> struct bagel::Storage<invaders::DestructionComponent> final : bagel::NoInstance { using type = bagel::PackedStorage<invaders::DestructionComponent>; };
+template <> struct bagel::Storage<invaders::InvulnerableComponent> final : bagel::NoInstance { using type = bagel::PackedStorage<invaders::InvulnerableComponent>; };

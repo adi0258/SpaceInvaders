@@ -153,6 +153,11 @@ namespace invaders {
 
         for (Entity e = Entity::first(); !e.eof(); e.next()) {
             if (e.test(mask)) {
+                if (e.has<InvulnerableComponent>()) {
+                    const auto& inv = e.get<InvulnerableComponent>();
+                    if ((inv.ttl % 16) < 8)
+                        continue;
+                }
                 const auto& t = e.get<Transform>();
                 const auto& d = e.get<Drawable>();
 
@@ -186,6 +191,26 @@ namespace invaders {
                 i.left = keys[k.left];
                 i.right = keys[k.right];
                 i.isShooting = keys[SDL_SCANCODE_SPACE];
+            }
+        }
+    }
+
+    void SpaceInvaders::invulnerability_system()
+    {
+        static const Mask mask = MaskBuilder()
+            .set<InvulnerableComponent>()
+            .set<ColliderComponent>()
+            .build();
+
+        for (Entity e = Entity::first(); !e.eof(); e.next()) {
+            if (e.test(mask)) {
+                auto& inv = e.get<InvulnerableComponent>();
+                const b2ShapeId shape = e.get<ColliderComponent>().shape;
+                inv.ttl--;
+                if (inv.ttl <= 0) {
+                    e.del<InvulnerableComponent>();
+                    b2Shape_EnableSensorEvents(shape, true);
+                }
             }
         }
     }
@@ -367,18 +392,10 @@ namespace invaders {
                 b2DestroyBody(sensorBody);
                 sensorEntity.destroy();
             }
-            else if (visitorEntity.has<LivesComponent>() && sensorEntity.has<AlienBulletComponent>()) {
-                auto& lives = visitorEntity.get<LivesComponent>();
+            else if (visitorEntity.has<WeaponComponent>() && sensorEntity.has<AlienBulletComponent>()) {
                 visitorEntity.add<DestructionComponent>(DestructionComponent{ 0, 3, 1});
                 b2Shape_EnableSensorEvents(visitorEntity.get<ColliderComponent>().shape, false);
-                lives.lives--;
-                if (lives.lives <= 0) {
-                    b2DestroyBody(sensorBody);
-                    sensorEntity.destroy();
-                    b2DestroyBody(visitorBody);
-                    visitorEntity.destroy();
-                    return;
-                }
+                visitorEntity.del<WeaponComponent>();
             }
         }
     }
@@ -438,16 +455,30 @@ namespace invaders {
             .set<DestructionComponent>()
             .set<KeysComponent>()
             .set<Drawable>()
+            .set<LivesComponent>()
             .build();
 
         for (Entity e = Entity::first(); !e.eof(); e.next()) {
             if (e.test(mask)) {
                 const auto& c = e.get<ColliderComponent>();
                 auto& d = e.get<DestructionComponent>();
+                auto& lives = e.get<LivesComponent>();
 
                 if (d.currentDestructionStage > d.totalDestructionStages) {
-                    b2DestroyBody(c.body);
-                    e.destroy();
+                    // If player has no lives left, destroy player
+                    if (lives.lives <= 0) {
+                        b2DestroyBody(c.body);
+                        e.destroy();
+                        return;
+                    }
+                    // If player has lives left, decrement lives and reset destruction component
+                    else {
+                        lives.lives--;
+                        e.del<DestructionComponent>();
+                        e.get<Drawable>().part = { gs::PLAYER_SPRITE_X, gs::PLAYER_SPRITE_Y, gs::PLAYER_SPRITE_W, gs::PLAYER_SPRITE_H };
+                        e.add<WeaponComponent>(WeaponComponent{ 0 });
+                        e.add<InvulnerableComponent>(InvulnerableComponent{ gs::PLAYER_INVULNERABLE_FRAMES });
+                    }
                 }
                 else {
                     d.framesToNextStage--;
@@ -478,6 +509,7 @@ namespace invaders {
 
         while (!quit) {
             input_system();
+            invulnerability_system();
             movement_system();
             shooting_system();
             alien_ai_system();

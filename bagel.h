@@ -237,9 +237,9 @@ namespace bagel
 			Storage<T>::type::add(ent,comp);
 		}
 		template <class T>
-		static void delComponent(ent_type ent, const T& comp) {
+		static void delComponent(ent_type ent) {
 			_masks[ent.id].clear(Component<T>::Bit);
-			Storage<T>::type::del(ent,comp);
+			Storage<T>::type::del(ent);
 		}
 
 		template <class T>
