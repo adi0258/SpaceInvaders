@@ -69,7 +69,7 @@ namespace invaders {
         constexpr float ALIEN_AI_TIME_TO_MOVE = 1.0f;
         constexpr int ALIEN_AI_INITIAL_DIRECTION = 1;
 
-        constexpr int ALIEN_ROWS = 1;
+        constexpr int ALIEN_ROWS = 4;
         constexpr int ALIEN_COLS = 8;
         constexpr float ALIEN_GRID_START_X = 100.f;
         constexpr float ALIEN_GRID_START_Y = 60.f;
@@ -109,7 +109,7 @@ namespace invaders {
         inline constexpr SDL_Rect HUD_SRC_HEARTS_1{ 626, 712, 174, 168 };
         inline constexpr SDL_Rect HUD_SRC_HEARTS_0{ 384, 712, 175, 168 };
 
-        constexpr int GAME_OVER_TTL_FRAMES = 180;
+        constexpr int GAME_OVER_TTL_FRAMES = 200;
         constexpr float HUD_CORNER_PADDING = 16.f;
         constexpr float HUD_HEARTS_MAX_DRAW_W = 120.f;
         constexpr float HUD_TITLE_MAX_DRAW_W_FRAC = 0.92f;
@@ -127,7 +127,11 @@ namespace invaders {
     using LivesComponent = struct { int lives{ 3 }; };
     using DestructionComponent = struct { int currentDestructionStage{ 0 }, totalDestructionStages{ 3 }, framesToNextStage{ gs::PLAYER_DESTRUCTION_FRAMES_TO_NEXT_STAGE }; };
     using InvulnerableComponent = struct { int ttl; };
-    using GameStateComponent = struct { int state{ 0 }; int ttl{ 0 }; };
+    using GameStateComponent = struct {
+        int state{ 0 };
+        int ttl{ 0 };
+        int gameOverTtl{ gs::GAME_OVER_TTL_FRAMES };
+    };
 
     using AlienAIComponent = struct {
         float timeToMove{ 1.0f };

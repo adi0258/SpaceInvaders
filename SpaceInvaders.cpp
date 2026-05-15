@@ -22,7 +22,6 @@ namespace invaders {
 
         b2ShapeDef shapeDef = b2DefaultShapeDef();
         shapeDef.density = gs::PLAYER_BODY_DENSITY;
-        shapeDef.enableSensorEvents = true;
         b2Polygon poly = b2MakeBox(
             gs::PLAYER_DRAW_HALF_W / gs::BOX_SCALE,
             gs::PLAYER_DRAW_HALF_H / gs::BOX_SCALE);
@@ -36,7 +35,8 @@ namespace invaders {
             Drawable,
             VelocityComponent,
             Transform,
-            WeaponComponent>(
+            WeaponComponent,
+            InvulnerableComponent>(
             LivesComponent{ gs::PLAYER_INITIAL_HP },
             KeysComponent{ SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT },
             IntentComponent{ false, false, false },
@@ -48,7 +48,8 @@ namespace invaders {
             Transform{
                SDL_FPoint{ x + gs::PLAYER_DRAW_HALF_W, y + gs::PLAYER_DRAW_HALF_H },
                0.f },
-            WeaponComponent{ 0 });
+            WeaponComponent{ 0 },
+            InvulnerableComponent{ gs::PLAYER_INVULNERABLE_FRAMES });
         return player;
     }
 
@@ -192,7 +193,21 @@ namespace invaders {
             if (!e.test(mask))
                 continue;
 
-            const auto& gsComp = e.get<GameStateComponent>();
+            auto& gsComp = e.get<GameStateComponent>();
+            if (gsComp.state == 2) {
+                gsComp.gameOverTtl--;
+                if (gsComp.gameOverTtl == 0) {
+                    auto& hudDraw = e.get<Drawable>();
+                    const auto& src = gs::HUD_SRC_START_GAME;
+                    const float drawW = static_cast<float>(WIN_W) * gs::HUD_TITLE_MAX_DRAW_W_FRAC;
+                    const float drawH = drawW * static_cast<float>(src.h) / static_cast<float>(src.w);
+                    hudDraw.part = { static_cast<float>(src.x), static_cast<float>(src.y),
+                        static_cast<float>(src.w), static_cast<float>(src.h) };
+                    hudDraw.size = { drawW, drawH };
+                    gsComp.state = 0;
+                }
+            }
+
             const auto& d = e.get<Drawable>();
             const float angle = e.has<Transform>() ? e.get<Transform>().a : 0.f;
 
@@ -512,7 +527,9 @@ namespace invaders {
                 if (d.currentDestructionStage > d.totalDestructionStages) {
                     // If player has no lives left, game over: HUD + destroy all entities except HUD
                     if (lives.lives <= 0) {
-                        HudEntity.get<GameStateComponent>().state = 2;
+                        auto& hudGs = HudEntity.get<GameStateComponent>();
+                        hudGs.state = 2;
+                        hudGs.gameOverTtl = gs::GAME_OVER_TTL_FRAMES;
                         auto& hudDrawGo = HudEntity.get<Drawable>();
                         const auto& goSrc = gs::HUD_SRC_GAME_OVER;
                         hudDrawGo.part = { static_cast<float>(goSrc.x), static_cast<float>(goSrc.y),
