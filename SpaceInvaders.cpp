@@ -369,6 +369,8 @@ namespace invaders {
             }
             else if (visitorEntity.has<LivesComponent>() && sensorEntity.has<AlienBulletComponent>()) {
                 auto& lives = visitorEntity.get<LivesComponent>();
+                visitorEntity.add<DestructionComponent>(DestructionComponent{ 0, 3, 1});
+                b2Shape_EnableSensorEvents(visitorEntity.get<ColliderComponent>().shape, false);
                 lives.lives--;
                 if (lives.lives <= 0) {
                     b2DestroyBody(sensorBody);
@@ -395,16 +397,17 @@ namespace invaders {
         }
     }
 
-    void SpaceInvaders::destruction_system() {
+    void SpaceInvaders::alien_destruction_system() {
         static const Mask mask = MaskBuilder()
             .set<Transform>()
             .set<ColliderComponent>()
             .set<DestructionComponent>()
+            .set<AlienAIComponent>()
+            .set<Drawable>()
             .build();
 
         for (Entity e = Entity::first(); !e.eof(); e.next()) {
             if (e.test(mask)) {
-                const auto& t = e.get<Transform>();
                 const auto& c = e.get<ColliderComponent>();
                 auto& d = e.get<DestructionComponent>();
 
@@ -417,26 +420,51 @@ namespace invaders {
                     if (d.framesToNextStage != 0)
                         continue;
                     d.currentDestructionStage++;
-                    d.framesToNextStage = gs::DESTRUCTION_FRAMES_TO_NEXT_STAGE;
-                    if (e.has<KeysComponent>()) {
-                        switch (d.currentDestructionStage) {
-                            case 1:
-                                e.get<Drawable>().part = { gs::PLAYER_DESTRUCTION_1_SPRITE_X, gs::PLAYER_DESTRUCTION_1_SPRITE_Y, gs::PLAYER_DESTRUCTION_1_SPRITE_W, gs::PLAYER_DESTRUCTION_1_SPRITE_H };
-                                break;
-                            case 2:
-                                e.get<Drawable>().part = { gs::PLAYER_DESTRUCTION_2_SPRITE_X, gs::PLAYER_DESTRUCTION_2_SPRITE_Y, gs::PLAYER_DESTRUCTION_2_SPRITE_W, gs::PLAYER_DESTRUCTION_2_SPRITE_H };
-                                break;
-                            case 3:
-                                e.get<Drawable>().part = { gs::PLAYER_DESTRUCTION_3_SPRITE_X, gs::PLAYER_DESTRUCTION_3_SPRITE_Y, gs::PLAYER_DESTRUCTION_3_SPRITE_W, gs::PLAYER_DESTRUCTION_3_SPRITE_H };
-                                break;
-                        }
+                    d.framesToNextStage = gs::ALIEN_DESTRUCTION_FRAMES_TO_NEXT_STAGE;
+                    switch (d.currentDestructionStage) {
+                        case 1:
+                            e.get<Drawable>().part = { gs::ALIEN_DESTRUCTION_SPRITE_X, gs::ALIEN_DESTRUCTION_SPRITE_Y, gs::ALIEN_DESTRUCTION_SPRITE_W, gs::ALIEN_DESTRUCTION_SPRITE_H };
+                            break;
                     }
-                    else if (e.has<AlienAIComponent>()) {
-                        switch (d.currentDestructionStage) {
-                            case 1:
-                                e.get<Drawable>().part = { gs::ALIEN_DESTRUCTION_SPRITE_X, gs::ALIEN_DESTRUCTION_SPRITE_Y, gs::ALIEN_DESTRUCTION_SPRITE_W, gs::ALIEN_DESTRUCTION_SPRITE_H };
-                                break;
-                        }
+                }
+            }
+        }
+    }
+
+    void SpaceInvaders::player_destruction_system() {
+        static const Mask mask = MaskBuilder()
+            .set<Transform>()
+            .set<ColliderComponent>()
+            .set<DestructionComponent>()
+            .set<KeysComponent>()
+            .set<Drawable>()
+            .build();
+
+        for (Entity e = Entity::first(); !e.eof(); e.next()) {
+            if (e.test(mask)) {
+                const auto& c = e.get<ColliderComponent>();
+                auto& d = e.get<DestructionComponent>();
+
+                if (d.currentDestructionStage > d.totalDestructionStages) {
+                    b2DestroyBody(c.body);
+                    e.destroy();
+                }
+                else {
+                    d.framesToNextStage--;
+                    if (d.framesToNextStage != 0)
+                        continue;
+                    d.currentDestructionStage++;
+                    d.framesToNextStage = gs::PLAYER_DESTRUCTION_FRAMES_TO_NEXT_STAGE;
+                    switch (d.currentDestructionStage) {
+                        case 1:
+                            e.get<Drawable>().part = { gs::PLAYER_DESTRUCTION_1_SPRITE_X, gs::PLAYER_DESTRUCTION_1_SPRITE_Y, gs::PLAYER_DESTRUCTION_1_SPRITE_W, gs::PLAYER_DESTRUCTION_1_SPRITE_H };
+                            break;
+                        case 2:
+                            e.get<Drawable>().part = { gs::PLAYER_DESTRUCTION_2_SPRITE_X, gs::PLAYER_DESTRUCTION_2_SPRITE_Y, gs::PLAYER_DESTRUCTION_2_SPRITE_W, gs::PLAYER_DESTRUCTION_2_SPRITE_H };
+                            break;
+                        case 3:
+                            e.get<Drawable>().part = { gs::PLAYER_DESTRUCTION_3_SPRITE_X, gs::PLAYER_DESTRUCTION_3_SPRITE_Y, gs::PLAYER_DESTRUCTION_3_SPRITE_W, gs::PLAYER_DESTRUCTION_3_SPRITE_H };
+                            break;
                     }
                 }
             }
@@ -456,7 +484,8 @@ namespace invaders {
             alien_shooting_system();
             box_system();
             collision_system();
-            destruction_system();
+            alien_destruction_system();
+            player_destruction_system();
             cleanup_system();
 
             SDL_RenderClear(ren);
