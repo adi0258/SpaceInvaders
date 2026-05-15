@@ -9,9 +9,11 @@ using namespace bagel;
 namespace invaders {
 
     Entity createPlayer(b2WorldId world, float x, float y) {
+        Entity player = Entity::create();
+
         b2BodyDef bodyDef = b2DefaultBodyDef();
         bodyDef.type = b2_kinematicBody;
-
+        bodyDef.userData = (void*)(uintptr_t)player.entity().id;
         bodyDef.position = {
             (x + gs::PLAYER_DRAW_HALF_W) / gs::BOX_SCALE,
             (y + gs::PLAYER_DRAW_HALF_H) / gs::BOX_SCALE };
@@ -26,7 +28,6 @@ namespace invaders {
             gs::PLAYER_DRAW_HALF_H / gs::BOX_SCALE);
         b2ShapeId playerShape = b2CreatePolygonShape(playerBody, &shapeDef, &poly);
 
-        Entity player = Entity::create();
         player.addAll<
         LivesComponent,
             KeysComponent,
@@ -144,6 +145,8 @@ namespace invaders {
         return bullet;
     }
 
+
+
     void SpaceInvaders::draw_system()
     {
         static const Mask mask = MaskBuilder()
@@ -153,6 +156,8 @@ namespace invaders {
 
         for (Entity e = Entity::first(); !e.eof(); e.next()) {
             if (e.test(mask)) {
+                if (e.has<GameStateComponent>())
+                    continue;
                 if (e.has<InvulnerableComponent>()) {
                     const auto& inv = e.get<InvulnerableComponent>();
                     if ((inv.ttl % 16) < 8)
@@ -170,6 +175,43 @@ namespace invaders {
                     ren, tex, &d.part, &dest, t.a,
                     nullptr, SDL_FLIP_NONE);
             }
+        }
+    }
+
+    void SpaceInvaders::draw_hud_system()
+    {
+        if (hud_tex == nullptr)
+            return;
+
+        static const Mask mask = MaskBuilder()
+            .set<GameStateComponent>()
+            .set<Drawable>()
+            .build();
+
+        for (Entity e = Entity::first(); !e.eof(); e.next()) {
+            if (!e.test(mask))
+                continue;
+
+            const auto& gsComp = e.get<GameStateComponent>();
+            const auto& d = e.get<Drawable>();
+            const float angle = e.has<Transform>() ? e.get<Transform>().a : 0.f;
+
+            SDL_FRect dest{};
+            if (gsComp.state == 1) {
+                dest.w = gs::HUD_HEARTS_MAX_DRAW_W;
+                dest.h = dest.w * d.part.h / d.part.w;
+                dest.x = gs::HUD_CORNER_PADDING;
+                dest.y = gs::HUD_CORNER_PADDING;
+            } else {
+                dest.w = d.size.x;
+                dest.h = d.size.y;
+                dest.x = WIN_W / 2.f - d.size.x / 2.f;
+                dest.y = WIN_H / 2.f - d.size.y / 2.f;
+            }
+
+            SDL_RenderTextureRotated(
+                ren, hud_tex, &d.part, &dest, angle,
+                nullptr, SDL_FLIP_NONE);
         }
     }
 
@@ -194,6 +236,8 @@ namespace invaders {
             }
         }
     }
+
+
 
     void SpaceInvaders::invulnerability_system()
     {
@@ -502,6 +546,20 @@ namespace invaders {
         }
     }
 
+    void SpaceInvaders::setup_entities_for_new_game() {
+        createPlayer(box,
+            (WIN_W / 2.f) - gs::PLAYER_DRAW_HALF_W,
+            WIN_H - gs::PLAYER_DRAW_H);
+
+        for (int row = 0; row < gs::ALIEN_ROWS; ++row) {
+            for (int col = 0; col < gs::ALIEN_COLS; ++col) {
+                createAlien(box,
+                    gs::ALIEN_GRID_START_X + static_cast<float>(col) * gs::ALIEN_GRID_SPACING_X,
+                    gs::ALIEN_GRID_START_Y + static_cast<float>(row) * gs::ALIEN_GRID_SPACING_Y);
+            }
+        }
+    }
+
     void SpaceInvaders::run()
     {
         auto start = SDL_GetTicks();
@@ -522,6 +580,7 @@ namespace invaders {
 
             SDL_RenderClear(ren);
             draw_system();
+            draw_hud_system();
             SDL_RenderPresent(ren);
 
             const auto end = SDL_GetTicks();
@@ -535,6 +594,13 @@ namespace invaders {
                 if ((e.type == SDL_EVENT_QUIT) ||
                     ((e.type == SDL_EVENT_KEY_DOWN) && (e.key.scancode == SDL_SCANCODE_ESCAPE))) {
                     quit = true;
+                }else if ((e.type == SDL_EVENT_KEY_DOWN) && (e.key.scancode == SDL_SCANCODE_RETURN) && (HudEntity.get<GameStateComponent>().state == 0)) {
+                    HudEntity.get<GameStateComponent>().state = 1;
+                    auto& hudDraw = HudEntity.get<Drawable>();
+                    hudDraw.part = { gs::HUD_SRC_HEARTS_3.x, gs::HUD_SRC_HEARTS_3.y, gs::HUD_SRC_HEARTS_3.w, gs::HUD_SRC_HEARTS_3.h };
+                    hudDraw.size = { gs::HUD_HEARTS_MAX_DRAW_W, gs::HUD_HEARTS_MAX_DRAW_W * hudDraw.part.h / hudDraw.part.w };
+
+                    setup_entities_for_new_game();
                 }
             }
         }
@@ -569,6 +635,20 @@ namespace invaders {
         }
         SDL_DestroySurface(surf);
 
+        {
+            SDL_Surface* hudSurf = IMG_Load(gs::HUD_SPRITE_SHEET_PATH);
+            if (hudSurf == nullptr) {
+                cout << "IMG_Load HUD: " << SDL_GetError() << endl;
+                return;
+            }
+            hud_tex = SDL_CreateTextureFromSurface(ren, hudSurf);
+            SDL_DestroySurface(hudSurf);
+            if (hud_tex == nullptr) {
+                cout << "SDL_CreateTextureFromSurface (HUD): " << SDL_GetError() << endl;
+                return;
+            }
+        }
+
         SDL_srand(time(nullptr));
         SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
 
@@ -594,16 +674,22 @@ namespace invaders {
         wallBody = b2CreateBody(box, &wallDef);
         b2CreatePolygonShape(wallBody, &wallShapeDef, &wallPoly);
 
-        createPlayer(box,
-            WIN_W_MID - gs::PLAYER_DRAW_HALF_W,
-            WIN_H - gs::PLAYER_DRAW_H);
-
-        for (int row = 0; row < gs::ALIEN_ROWS; ++row) {
-            for (int col = 0; col < gs::ALIEN_COLS; ++col) {
-                createAlien(box,
-                    gs::ALIEN_GRID_START_X + static_cast<float>(col) * gs::ALIEN_GRID_SPACING_X,
-                    gs::ALIEN_GRID_START_Y + static_cast<float>(row) * gs::ALIEN_GRID_SPACING_Y);
-            }
+        HudEntity = Entity::create();
+        {
+            const auto& src = gs::HUD_SRC_START_GAME;
+            const float drawW = static_cast<float>(WIN_W) * gs::HUD_TITLE_MAX_DRAW_W_FRAC;
+            const float drawH = drawW * static_cast<float>(src.h) / static_cast<float>(src.w);
+            HudEntity.addAll<Drawable, KeysComponent, Transform, GameStateComponent>(
+                Drawable{
+                    { static_cast<float>(gs::HUD_SRC_START_GAME.x), static_cast<float>(gs::HUD_SRC_START_GAME.y),
+                      static_cast<float>(gs::HUD_SRC_START_GAME.w), static_cast<float>(gs::HUD_SRC_START_GAME.h) },
+                    { drawW, drawH }
+                },
+           
+                KeysComponent{ SDL_SCANCODE_RETURN, SDL_SCANCODE_KP_ENTER },
+                Transform{ SDL_FPoint{ WIN_W / 2.f, WIN_H / 2.f }, 0.f },
+                GameStateComponent{}
+            );
         }
     }
 
@@ -613,6 +699,8 @@ namespace invaders {
             b2DestroyWorld(box);
         if (tex != nullptr)
             SDL_DestroyTexture(tex);
+        if (hud_tex != nullptr)
+            SDL_DestroyTexture(hud_tex);
         if (ren != nullptr)
             SDL_DestroyRenderer(ren);
         if (win != nullptr)

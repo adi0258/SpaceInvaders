@@ -103,10 +103,16 @@ namespace invaders {
         inline constexpr SDL_Rect HUD_SRC_GAME_OVER{ 28, 1053, 1132, 129 };
         inline constexpr SDL_Rect HUD_SRC_START_GAME{ 29, 1310, 2011, 108 };
         // Precomposed life rows: N = number of filled hearts (0 = empty outline only).
-        inline constexpr SDL_Rect HUD_SRC_HEARTS_3{ 7, 450, 562, 200 };
+        // 562×200 band at (7,450); omit top 10% of original height (two 5% crops) from sampling.
+        inline constexpr SDL_Rect HUD_SRC_HEARTS_3{ 7, 450 + 200 * 10 / 100, 562, 200 - 200 * 10 / 100 };
         inline constexpr SDL_Rect HUD_SRC_HEARTS_2{ 10, 712, 362, 168 };
         inline constexpr SDL_Rect HUD_SRC_HEARTS_1{ 626, 712, 174, 168 };
         inline constexpr SDL_Rect HUD_SRC_HEARTS_0{ 384, 712, 175, 168 };
+
+        constexpr int GAME_OVER_TTL_FRAMES = 180;
+        constexpr float HUD_CORNER_PADDING = 16.f;
+        constexpr float HUD_HEARTS_MAX_DRAW_W = 120.f;
+        constexpr float HUD_TITLE_MAX_DRAW_W_FRAC = 0.92f;
     }
 
     using Transform = struct { SDL_FPoint p; float a; };
@@ -121,6 +127,7 @@ namespace invaders {
     using LivesComponent = struct { int lives{ 3 }; };
     using DestructionComponent = struct { int currentDestructionStage{ 0 }, totalDestructionStages{ 3 }, framesToNextStage{ gs::PLAYER_DESTRUCTION_FRAMES_TO_NEXT_STAGE }; };
     using InvulnerableComponent = struct { int ttl; };
+    using GameStateComponent = struct { int state{ 0 }; int ttl{ 0 }; };
 
     using AlienAIComponent = struct {
         float timeToMove{ 1.0f };
@@ -148,8 +155,11 @@ namespace invaders {
         static constexpr Uint64	GAME_FRAME = 1000/FPS;
         static constexpr float	RAD_TO_DEG = 57.2958f;
 
+        void setup_entities_for_new_game();
+
         void movement_system();
         void draw_system();
+        void draw_hud_system();
         void box_system();
         void input_system();
         void alien_ai_system();
@@ -162,9 +172,12 @@ namespace invaders {
         void invulnerability_system();
 
         SDL_Texture*		tex = nullptr;
+        SDL_Texture*		hud_tex = nullptr;
         SDL_Renderer*		ren = nullptr;
         SDL_Window*			win = nullptr;
         b2WorldId			box = b2_nullWorldId;
+
+        Entity HudEntity = {{0}};
     };
 }
 
@@ -181,3 +194,4 @@ template <> struct bagel::Storage<invaders::AlienBulletComponent> final : bagel:
 template <> struct bagel::Storage<invaders::LivesComponent> final : bagel::NoInstance { using type = bagel::PackedStorage<invaders::LivesComponent>; };
 template <> struct bagel::Storage<invaders::DestructionComponent> final : bagel::NoInstance { using type = bagel::PackedStorage<invaders::DestructionComponent>; };
 template <> struct bagel::Storage<invaders::InvulnerableComponent> final : bagel::NoInstance { using type = bagel::PackedStorage<invaders::InvulnerableComponent>; };
+template <> struct bagel::Storage<invaders::GameStateComponent> final : bagel::NoInstance { using type = bagel::PackedStorage<invaders::GameStateComponent>; };
