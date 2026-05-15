@@ -413,6 +413,7 @@ namespace invaders {
             }
         }
 
+
         for (Entity e = Entity::first(); !e.eof(); e.next()) {
             if (e.test(mask)) {
                 auto& ai = e.get<AlienAIComponent>();
@@ -508,6 +509,45 @@ namespace invaders {
         }
     }
 
+    void SpaceInvaders::enter_game_over() {
+        auto& hudGs = HudEntity.get<GameStateComponent>();
+        hudGs.state = 2;
+        hudGs.gameOverTtl = gs::GAME_OVER_TTL_FRAMES;
+        auto& hudDrawGo = HudEntity.get<Drawable>();
+        const auto& goSrc = gs::HUD_SRC_GAME_OVER;
+        hudDrawGo.part = { static_cast<float>(goSrc.x), static_cast<float>(goSrc.y),
+            static_cast<float>(goSrc.w), static_cast<float>(goSrc.h) };
+        const float goDrawW = static_cast<float>(WIN_W) * gs::HUD_TITLE_MAX_DRAW_W_FRAC;
+        hudDrawGo.size = { goDrawW, goDrawW * static_cast<float>(goSrc.h) / static_cast<float>(goSrc.w) };
+
+        for (Entity ent = Entity::first(); !ent.eof(); ent.next()) {
+            if (ent.entity().id == HudEntity.entity().id)
+                continue;
+            if (ent.mask().ctz() < 0)
+                continue;
+            if (ent.has<ColliderComponent>())
+                b2DestroyBody(ent.get<ColliderComponent>().body);
+            ent.destroy();
+        }
+    }
+
+    void SpaceInvaders::check_win_system() {
+        const int playState = HudEntity.get<GameStateComponent>().state;
+        if (playState != 1)
+            return;
+
+        static const Mask alienMask = MaskBuilder().set<AlienAIComponent>().build();
+        int count = 0;
+        for (Entity ent = Entity::first(); !ent.eof(); ent.next()) {
+            if (ent.mask().ctz() < 0)
+                continue;
+            if (ent.test(alienMask))
+                count++;
+        }
+        if (count == 0)
+            enter_game_over();
+    }
+
     void SpaceInvaders::player_destruction_system() {
         static const Mask mask = MaskBuilder()
             .set<Transform>()
@@ -527,25 +567,7 @@ namespace invaders {
                 if (d.currentDestructionStage > d.totalDestructionStages) {
                     // If player has no lives left, game over: HUD + destroy all entities except HUD
                     if (lives.lives <= 0) {
-                        auto& hudGs = HudEntity.get<GameStateComponent>();
-                        hudGs.state = 2;
-                        hudGs.gameOverTtl = gs::GAME_OVER_TTL_FRAMES;
-                        auto& hudDrawGo = HudEntity.get<Drawable>();
-                        const auto& goSrc = gs::HUD_SRC_GAME_OVER;
-                        hudDrawGo.part = { static_cast<float>(goSrc.x), static_cast<float>(goSrc.y),
-                            static_cast<float>(goSrc.w), static_cast<float>(goSrc.h) };
-                        const float goDrawW = static_cast<float>(WIN_W) * gs::HUD_TITLE_MAX_DRAW_W_FRAC;
-                        hudDrawGo.size = { goDrawW, goDrawW * static_cast<float>(goSrc.h) / static_cast<float>(goSrc.w) };
-
-                        for (Entity ent = Entity::first(); !ent.eof(); ent.next()) {
-                            if (ent.entity().id == HudEntity.entity().id)
-                                continue;
-                            if (ent.mask().ctz() < 0)
-                                continue;
-                            if (ent.has<ColliderComponent>())
-                                b2DestroyBody(ent.get<ColliderComponent>().body);
-                            ent.destroy();
-                        }
+                        enter_game_over();
                         return;
                     }
                     // If player has lives left, decrement lives and reset destruction component
@@ -629,6 +651,7 @@ namespace invaders {
             box_system();
             collision_system();
             alien_destruction_system();
+            check_win_system();
             player_destruction_system();
             cleanup_system();
 

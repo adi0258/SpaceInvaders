@@ -172,6 +172,8 @@ namespace invaders {
         void alien_shooting_system();
         void cleanup_system();
         void alien_destruction_system();
+        void check_win_system();
+        void enter_game_over();
         void player_destruction_system();
         void invulnerability_system();
 
