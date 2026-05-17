@@ -550,22 +550,38 @@ namespace invaders {
         }
     }
 
+
     void SpaceInvaders::check_win_system() {
         const int playState = HudEntity.get<GameStateComponent>().state;
         if (playState != 1)
             return;
 
-        static const Mask alienMask = MaskBuilder().set<AlienAIComponent>().build();
+        static const Mask alienMask = MaskBuilder()
+            .set<AlienAIComponent>()
+            .set<Transform>()
+            .build();
+
         int count = 0;
+        bool alienInvaded = false;
+
         for (Entity ent = Entity::first(); !ent.eof(); ent.next()) {
             if (ent.mask().ctz() < 0)
                 continue;
-            if (ent.test(alienMask))
-                count++;
-        }
 
-        if (count == 0)
+            if (ent.test(alienMask)) {
+                count++;
+                const auto& t = ent.get<Transform>();
+                if (t.p.y >= (WIN_H - gs::PLAYER_DRAW_H)) {
+                    alienInvaded = true;
+                }
+            }
+        }
+        if (count == 0) {
             enter_victory();
+        }
+        else if (alienInvaded) {
+            enter_game_over();
+        }
     }
 
     void SpaceInvaders::player_destruction_system() {
