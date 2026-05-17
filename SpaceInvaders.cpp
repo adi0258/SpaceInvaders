@@ -220,6 +220,7 @@ namespace invaders {
                 dest.h = d.size.y;
                 dest.x = WIN_W / 2.f - d.size.x / 2.f;
                 dest.y = WIN_H / 2.f - d.size.y / 2.f;
+                if (gsComp.state == 3) dest.x -= 100.f;
             }
 
             SDL_Texture* current_tex = (gsComp.state == 3) ? win_tex : hud_tex;
