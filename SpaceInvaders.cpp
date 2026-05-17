@@ -629,7 +629,6 @@ namespace invaders {
                         const float heartScale = gs::HUD_HEARTS_MAX_DRAW_W / static_cast<float>(gs::HUD_SRC_HEARTS_3.w);
                         hudDraw.size = { hudDraw.part.w * heartScale, hudDraw.part.h * heartScale };
 
-                        // הוסרה קריאה כפולה שהייתה כאן
                         e.del<DestructionComponent>();
                         e.get<Drawable>().part = { gs::PLAYER_SPRITE_X, gs::PLAYER_SPRITE_Y, gs::PLAYER_SPRITE_W, gs::PLAYER_SPRITE_H };
                         e.add<WeaponComponent>(WeaponComponent{ 0 });
