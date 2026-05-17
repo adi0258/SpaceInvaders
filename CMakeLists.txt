@@ -6,7 +6,6 @@ set(CMAKE_CXX_STANDARD 20)
 add_executable(bagel26
         main.cpp
         bagel.h
-        tests.cpp
         SpaceInvaders.cpp
         SpaceInvaders.h)
 
