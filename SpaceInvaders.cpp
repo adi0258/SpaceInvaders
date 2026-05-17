@@ -12,7 +12,7 @@ namespace invaders {
         Entity player = Entity::create();
 
         b2BodyDef bodyDef = b2DefaultBodyDef();
-        bodyDef.type = b2_kinematicBody; // Kinematic body restricts spinning entirely
+        bodyDef.type = b2_kinematicBody;
         bodyDef.userData = (void*)(uintptr_t)player.entity().id;
         bodyDef.position = {
             (x + gs::PLAYER_DRAW_HALF_W) / gs::BOX_SCALE,
@@ -211,8 +211,8 @@ namespace invaders {
 
             SDL_FRect dest{};
             if (gsComp.state == 1) {
-                dest.w = gs::HUD_HEARTS_MAX_DRAW_W;
-                dest.h = dest.w * d.part.h / d.part.w;
+                dest.w = d.size.x;
+                dest.h = d.size.y;
                 dest.x = gs::HUD_CORNER_PADDING;
                 dest.y = gs::HUD_CORNER_PADDING;
             } else {
@@ -359,7 +359,6 @@ namespace invaders {
 
         int count = 0;
         for (Entity e = Entity::first(); !e.eof(); e.next()) {
-            // החלפנו מ-DeadComponent ל-DestructionComponent כדי שחייזר שמתפוצץ כרגע לא יירה
             if (e.test(mask) && !e.has<DestructionComponent>()) {
                 count++;
             }
@@ -395,7 +394,6 @@ namespace invaders {
         int newDirection = 0;
 
         for (Entity e = Entity::first(); !e.eof(); e.next()) {
-            // החלפנו מ-DeadComponent ל-DestructionComponent
             if (e.test(mask) && !e.has<DestructionComponent>()) {
                 const auto& t = e.get<Transform>();
                 const auto& ai = e.get<AlienAIComponent>();
@@ -612,8 +610,10 @@ namespace invaders {
                                 break;
                             }
                         }
-                        hudDraw.size = { gs::HUD_HEARTS_MAX_DRAW_W, gs::HUD_HEARTS_MAX_DRAW_W * hudDraw.part.h / hudDraw.part.w };
+                        const float heartScale = gs::HUD_HEARTS_MAX_DRAW_W / static_cast<float>(gs::HUD_SRC_HEARTS_3.w);
+                        hudDraw.size = { hudDraw.part.w * heartScale, hudDraw.part.h * heartScale };
 
+                        // הוסרה קריאה כפולה שהייתה כאן
                         e.del<DestructionComponent>();
                         e.get<Drawable>().part = { gs::PLAYER_SPRITE_X, gs::PLAYER_SPRITE_Y, gs::PLAYER_SPRITE_W, gs::PLAYER_SPRITE_H };
                         e.add<WeaponComponent>(WeaponComponent{ 0 });
@@ -695,7 +695,9 @@ namespace invaders {
                     HudEntity.get<GameStateComponent>().state = 1;
                     auto& hudDraw = HudEntity.get<Drawable>();
                     hudDraw.part = { (float)gs::HUD_SRC_HEARTS_3.x, (float)gs::HUD_SRC_HEARTS_3.y, (float)gs::HUD_SRC_HEARTS_3.w, (float)gs::HUD_SRC_HEARTS_3.h };
-                    hudDraw.size = { gs::HUD_HEARTS_MAX_DRAW_W, gs::HUD_HEARTS_MAX_DRAW_W * hudDraw.part.h / hudDraw.part.w };
+
+                    const float heartScale = gs::HUD_HEARTS_MAX_DRAW_W / static_cast<float>(gs::HUD_SRC_HEARTS_3.w);
+                    hudDraw.size = { hudDraw.part.w * heartScale, hudDraw.part.h * heartScale };
 
                     setup_entities_for_new_game();
                 }
