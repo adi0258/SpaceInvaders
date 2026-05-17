@@ -35,8 +35,6 @@ namespace invaders {
         constexpr float PLAYER_BODY_DENSITY = 1.f;
         constexpr int PLAYER_INVULNERABLE_FRAMES = 120;
 
-        // Player ship row on alternate_space_invaders_sprite_sheet.png: four 16px-spaced
-        // columns at x = 1, 17, 33, 49 (intact at 1,20,13,8 then three follow-on frames).
         constexpr float PLAYER_DESTRUCTION_1_SPRITE_X = 17.f;
         constexpr float PLAYER_DESTRUCTION_1_SPRITE_Y = 22.f;
         constexpr float PLAYER_DESTRUCTION_1_SPRITE_W = 13.f;
@@ -94,16 +92,15 @@ namespace invaders {
         constexpr float EXPLOSION_SPRITE_H = 8.f;
         constexpr float EXPLOSION_LIFETIME_SEC = 0.5f;
 
-        // res/hud_sprite_sheet.png — 2196x1952; srcrect for SDL_RenderTexture (tight bounds on atlas).
         inline constexpr const char* HUD_SPRITE_SHEET_PATH = "res/hud_sprite_sheet.png";
+        inline constexpr const char* YOU_WIN_PATH = "res/you win sheet.jpg";
         inline constexpr int HUD_SHEET_W = 2196;
         inline constexpr int HUD_SHEET_H = 1952;
 
         inline constexpr SDL_Rect HUD_SRC_LIVES{ 26, 367, 365, 133 };
         inline constexpr SDL_Rect HUD_SRC_GAME_OVER{ 28, 1053, 1132, 129 };
         inline constexpr SDL_Rect HUD_SRC_START_GAME{ 29, 1310, 2011, 108 };
-        // Precomposed life rows: N = number of filled hearts (0 = empty outline only).
-        // 562×200 band at (7,450); omit top 10% of original height (two 5% crops) from sampling.
+        inline constexpr SDL_Rect HUD_SRC_YOU_WIN{ 0, 0, 1000, 200 };
         inline constexpr SDL_Rect HUD_SRC_HEARTS_3{ 7, 450 + 200 * 10 / 100, 562, 200 - 200 * 10 / 100 };
         inline constexpr SDL_Rect HUD_SRC_HEARTS_2{ 10, 712, 362, 168 };
         inline constexpr SDL_Rect HUD_SRC_HEARTS_1{ 626, 712, 174, 168 };
@@ -115,25 +112,25 @@ namespace invaders {
         constexpr float HUD_TITLE_MAX_DRAW_W_FRAC = 0.92f;
     }
 
-    using Transform = struct { SDL_FPoint p; float a; };
-    using VelocityComponent = struct { float dx{ 0 }, dy{ 0 }; };
-    using Drawable = struct { SDL_FRect part; SDL_FPoint size; };
-    using ColliderComponent = struct { b2BodyId body{}; b2ShapeId shape{}; };
-    using KeysComponent = struct { SDL_Scancode left, right; };
-    using IntentComponent = struct { bool left, right, isShooting; };
-    using WeaponComponent = struct { int cooldown{ 0 }; };
-    using BulletComponent = struct {};
-    using AlienBulletComponent = struct {};
-    using LivesComponent = struct { int lives{ 3 }; };
-    using DestructionComponent = struct { int currentDestructionStage{ 0 }, totalDestructionStages{ 3 }, framesToNextStage{ gs::PLAYER_DESTRUCTION_FRAMES_TO_NEXT_STAGE }; };
-    using InvulnerableComponent = struct { int ttl; };
-    using GameStateComponent = struct {
+    struct Transform { SDL_FPoint p; float a; };
+    struct VelocityComponent { float dx{ 0 }, dy{ 0 }; };
+    struct Drawable { SDL_FRect part; SDL_FPoint size; };
+    struct ColliderComponent { b2BodyId body{}; b2ShapeId shape{}; };
+    struct KeysComponent { SDL_Scancode left, right; };
+    struct IntentComponent { bool left, right, isShooting; };
+    struct WeaponComponent { int cooldown{ 0 }; };
+    struct BulletComponent {};
+    struct AlienBulletComponent {};
+    struct LivesComponent { int lives{ 3 }; };
+    struct DestructionComponent { int currentDestructionStage{ 0 }, totalDestructionStages{ 3 }, framesToNextStage{ gs::PLAYER_DESTRUCTION_FRAMES_TO_NEXT_STAGE }; };
+    struct InvulnerableComponent { int ttl; };
+    struct GameStateComponent {
         int state{ 0 };
         int ttl{ 0 };
         int gameOverTtl{ gs::GAME_OVER_TTL_FRAMES };
     };
 
-    using AlienAIComponent = struct {
+    struct AlienAIComponent {
         float timeToMove{ 1.0f };
         int direction{ 1 };
     };
@@ -152,12 +149,12 @@ namespace invaders {
         void run();
         bool valid() const { return b2World_IsValid(box); }
     private:
-        static constexpr int	WIN_W = 800;
-        static constexpr int	WIN_H = 600;
+        static constexpr int    WIN_W = 800;
+        static constexpr int    WIN_H = 600;
 
-        static constexpr int	FPS = 60;
-        static constexpr Uint64	GAME_FRAME = 1000/FPS;
-        static constexpr float	RAD_TO_DEG = 57.2958f;
+        static constexpr int    FPS = 60;
+        static constexpr Uint64 GAME_FRAME = 1000/FPS;
+        static constexpr float  RAD_TO_DEG = 57.2958f;
 
         void setup_entities_for_new_game();
 
@@ -174,14 +171,16 @@ namespace invaders {
         void alien_destruction_system();
         void check_win_system();
         void enter_game_over();
+        void enter_victory();
         void player_destruction_system();
         void invulnerability_system();
 
-        SDL_Texture*		tex = nullptr;
-        SDL_Texture*		hud_tex = nullptr;
-        SDL_Renderer*		ren = nullptr;
-        SDL_Window*			win = nullptr;
-        b2WorldId			box = b2_nullWorldId;
+        SDL_Texture* tex = nullptr;
+        SDL_Texture* hud_tex = nullptr;
+        SDL_Texture* win_tex = nullptr;
+        SDL_Renderer* ren = nullptr;
+        SDL_Window* win = nullptr;
+        b2WorldId         box = b2_nullWorldId;
 
         Entity HudEntity = {{0}};
     };

@@ -12,13 +12,12 @@ namespace invaders {
         Entity player = Entity::create();
 
         b2BodyDef bodyDef = b2DefaultBodyDef();
-        bodyDef.type = b2_kinematicBody;
+        bodyDef.type = b2_kinematicBody; // Kinematic body restricts spinning entirely
         bodyDef.userData = (void*)(uintptr_t)player.entity().id;
         bodyDef.position = {
             (x + gs::PLAYER_DRAW_HALF_W) / gs::BOX_SCALE,
             (y + gs::PLAYER_DRAW_HALF_H) / gs::BOX_SCALE };
         b2BodyId playerBody = b2CreateBody(world, &bodyDef);
-
 
         b2ShapeDef shapeDef = b2DefaultShapeDef();
         shapeDef.density = gs::PLAYER_BODY_DENSITY;
@@ -28,7 +27,7 @@ namespace invaders {
         b2ShapeId playerShape = b2CreatePolygonShape(playerBody, &shapeDef, &poly);
 
         player.addAll<
-        LivesComponent,
+            LivesComponent,
             KeysComponent,
             IntentComponent,
             ColliderComponent,
@@ -146,8 +145,6 @@ namespace invaders {
         return bullet;
     }
 
-
-
     void SpaceInvaders::draw_system()
     {
         static const Mask mask = MaskBuilder()
@@ -194,7 +191,8 @@ namespace invaders {
                 continue;
 
             auto& gsComp = e.get<GameStateComponent>();
-            if (gsComp.state == 2) {
+
+            if (gsComp.state == 2 || gsComp.state == 3) {
                 gsComp.gameOverTtl--;
                 if (gsComp.gameOverTtl == 0) {
                     auto& hudDraw = e.get<Drawable>();
@@ -224,8 +222,10 @@ namespace invaders {
                 dest.y = WIN_H / 2.f - d.size.y / 2.f;
             }
 
+            SDL_Texture* current_tex = (gsComp.state == 3) ? win_tex : hud_tex;
+
             SDL_RenderTextureRotated(
-                ren, hud_tex, &d.part, &dest, angle,
+                ren, current_tex, &d.part, &dest, angle,
                 nullptr, SDL_FLIP_NONE);
         }
     }
@@ -251,8 +251,6 @@ namespace invaders {
             }
         }
     }
-
-
 
     void SpaceInvaders::invulnerability_system()
     {
@@ -361,7 +359,8 @@ namespace invaders {
 
         int count = 0;
         for (Entity e = Entity::first(); !e.eof(); e.next()) {
-            if (e.test(mask)) {
+            // החלפנו מ-DeadComponent ל-DestructionComponent כדי שחייזר שמתפוצץ כרגע לא יירה
+            if (e.test(mask) && !e.has<DestructionComponent>()) {
                 count++;
             }
         }
@@ -372,7 +371,7 @@ namespace invaders {
         int currentIndex = 0;
 
         for (Entity e = Entity::first(); !e.eof(); e.next()) {
-            if (e.test(mask)) {
+            if (e.test(mask) && !e.has<DestructionComponent>()) {
                 if (currentIndex == chosenIndex) {
                     const auto& t = e.get<Transform>();
                     createAlienBullet(box, t.p.x, t.p.y + 20.f, 25.f);
@@ -396,7 +395,8 @@ namespace invaders {
         int newDirection = 0;
 
         for (Entity e = Entity::first(); !e.eof(); e.next()) {
-            if (e.test(mask)) {
+            // החלפנו מ-DeadComponent ל-DestructionComponent
+            if (e.test(mask) && !e.has<DestructionComponent>()) {
                 const auto& t = e.get<Transform>();
                 const auto& ai = e.get<AlienAIComponent>();
 
@@ -413,9 +413,8 @@ namespace invaders {
             }
         }
 
-
         for (Entity e = Entity::first(); !e.eof(); e.next()) {
-            if (e.test(mask)) {
+            if (e.test(mask) && !e.has<DestructionComponent>()) {
                 auto& ai = e.get<AlienAIComponent>();
                 const auto& c = e.get<ColliderComponent>();
 
@@ -445,7 +444,7 @@ namespace invaders {
 
             Entity sensorEntity{ ent_type{ static_cast<id_type>(reinterpret_cast<uintptr_t>(b2Body_GetUserData(sensorBody))) } };
             Entity visitorEntity{ ent_type{ static_cast<id_type>(reinterpret_cast<uintptr_t>(b2Body_GetUserData(visitorBody))) } };
-            
+
             if (sensorEntity.has<BulletComponent>() && visitorEntity.has<AlienAIComponent>()) {
                 visitorEntity.add<DestructionComponent>(DestructionComponent{ 0, 1, 1});
                 b2Shape_EnableSensorEvents(visitorEntity.get<ColliderComponent>().shape, false);
@@ -456,19 +455,19 @@ namespace invaders {
                 visitorEntity.add<DestructionComponent>(DestructionComponent{ 0, 3, 1});
                 b2Shape_EnableSensorEvents(visitorEntity.get<ColliderComponent>().shape, false);
                 visitorEntity.del<WeaponComponent>();
-                
             }
         }
     }
 
     void SpaceInvaders::cleanup_system() {
-        // Clear Out-Of-Bounds items
         static const Mask transformMask = MaskBuilder().set<Transform>().build();
         for (Entity e = Entity::first(); !e.eof(); e.next()) {
-            if (e.test(transformMask) ) {
+            if (e.test(transformMask)) {
                 const auto& t = e.get<Transform>();
                 if (t.p.y > WIN_H + 100.f || t.p.y < -100.f) {
-                    b2DestroyBody(e.get<ColliderComponent>().body);
+                    if (e.has<ColliderComponent>()) {
+                        b2DestroyBody(e.get<ColliderComponent>().body);
+                    }
                     e.destroy();
                 }
             }
@@ -531,6 +530,28 @@ namespace invaders {
         }
     }
 
+    void SpaceInvaders::enter_victory() {
+        auto& hudGs = HudEntity.get<GameStateComponent>();
+        hudGs.state = 3;
+        hudGs.gameOverTtl = gs::GAME_OVER_TTL_FRAMES;
+
+        auto& hudDrawWin = HudEntity.get<Drawable>();
+        hudDrawWin.part = { 0.f, 0.f, 477.f, 268.f };
+
+        const float winDrawW = static_cast<float>(WIN_W) * gs::HUD_TITLE_MAX_DRAW_W_FRAC;
+        hudDrawWin.size = { winDrawW, winDrawW * 268.f / 477.f };
+
+        for (Entity ent = Entity::first(); !ent.eof(); ent.next()) {
+            if (ent.entity().id == HudEntity.entity().id)
+                continue;
+            if (ent.mask().ctz() < 0)
+                continue;
+            if (ent.has<ColliderComponent>())
+                b2DestroyBody(ent.get<ColliderComponent>().body);
+            ent.destroy();
+        }
+    }
+
     void SpaceInvaders::check_win_system() {
         const int playState = HudEntity.get<GameStateComponent>().state;
         if (playState != 1)
@@ -544,8 +565,9 @@ namespace invaders {
             if (ent.test(alienMask))
                 count++;
         }
+
         if (count == 0)
-            enter_game_over();
+            enter_victory();
     }
 
     void SpaceInvaders::player_destruction_system() {
@@ -565,12 +587,10 @@ namespace invaders {
                 auto& lives = e.get<LivesComponent>();
 
                 if (d.currentDestructionStage > d.totalDestructionStages) {
-                    // If player has no lives left, game over: HUD + destroy all entities except HUD
                     if (lives.lives <= 0) {
                         enter_game_over();
                         return;
                     }
-                    // If player has lives left, decrement lives and reset destruction component
                     else {
                         lives.lives--;
                         auto& hudDraw = HudEntity.get<Drawable>();
@@ -674,7 +694,7 @@ namespace invaders {
                 }else if ((e.type == SDL_EVENT_KEY_DOWN) && (e.key.scancode == SDL_SCANCODE_RETURN) && (HudEntity.get<GameStateComponent>().state == 0)) {
                     HudEntity.get<GameStateComponent>().state = 1;
                     auto& hudDraw = HudEntity.get<Drawable>();
-                    hudDraw.part = { gs::HUD_SRC_HEARTS_3.x, gs::HUD_SRC_HEARTS_3.y, gs::HUD_SRC_HEARTS_3.w, gs::HUD_SRC_HEARTS_3.h };
+                    hudDraw.part = { (float)gs::HUD_SRC_HEARTS_3.x, (float)gs::HUD_SRC_HEARTS_3.y, (float)gs::HUD_SRC_HEARTS_3.w, (float)gs::HUD_SRC_HEARTS_3.h };
                     hudDraw.size = { gs::HUD_HEARTS_MAX_DRAW_W, gs::HUD_HEARTS_MAX_DRAW_W * hudDraw.part.h / hudDraw.part.w };
 
                     setup_entities_for_new_game();
@@ -726,6 +746,20 @@ namespace invaders {
             }
         }
 
+        {
+            SDL_Surface* winSurf = IMG_Load(gs::YOU_WIN_PATH);
+            if (winSurf == nullptr) {
+                cout << "IMG_Load WIN: " << SDL_GetError() << endl;
+                return;
+            }
+            win_tex = SDL_CreateTextureFromSurface(ren, winSurf);
+            SDL_DestroySurface(winSurf);
+            if (win_tex == nullptr) {
+                cout << "SDL_CreateTextureFromSurface (WIN): " << SDL_GetError() << endl;
+                return;
+            }
+        }
+
         SDL_srand(time(nullptr));
         SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
 
@@ -762,7 +796,7 @@ namespace invaders {
                       static_cast<float>(gs::HUD_SRC_START_GAME.w), static_cast<float>(gs::HUD_SRC_START_GAME.h) },
                     { drawW, drawH }
                 },
-           
+
                 KeysComponent{ SDL_SCANCODE_RETURN, SDL_SCANCODE_KP_ENTER },
                 Transform{ SDL_FPoint{ WIN_W / 2.f, WIN_H / 2.f }, 0.f },
                 GameStateComponent{}
@@ -778,6 +812,8 @@ namespace invaders {
             SDL_DestroyTexture(tex);
         if (hud_tex != nullptr)
             SDL_DestroyTexture(hud_tex);
+        if (win_tex != nullptr)
+            SDL_DestroyTexture(win_tex);
         if (ren != nullptr)
             SDL_DestroyRenderer(ren);
         if (win != nullptr)
